@@ -1,0 +1,18 @@
+Icon Placeholder
+
+The icon.png file should be placed here.
+
+Recommended size: 512x512 px
+Format: PNG with transparency
+
+Icon should represent:
+- Turtle (for Turtle WoW)
+- Loot/Gear theme
+- Connection/Sync symbol
+
+You can:
+1. Design a custom icon
+2. Use a stock icon service (icons8, flaticon, etc.)
+3. Generate with an AI tool
+
+For now, the tray will use a fallback colored circle if no icon is found.

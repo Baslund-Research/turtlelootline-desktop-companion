@@ -1,0 +1,49 @@
+{
+  "name": "turtlelootline-companion",
+  "version": "1.0.0",
+  "description": "Desktop companion for TurtleLootLine - syncs WoW gear data",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win"
+  },
+  "keywords": ["turtle-wow", "gearscore", "electron"],
+  "author": "Ronni",
+  "license": "MIT",
+  "dependencies": {
+    "auto-launch": "^5.0.6",
+    "chokidar": "^3.5.3",
+    "electron-store": "^8.1.0",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.turtlelootline.companion",
+    "productName": "TurtleLootLine Companion",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "src/**/*",
+      "ui/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": ["dmg", "zip"],
+      "icon": "assets/icon.png"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "assets/icon.png"
+    }
+  }
+}

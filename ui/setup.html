@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TurtleLootLine Setup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .path-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .path-input-group input {
+            flex: 1;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-auto-detect {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .btn-auto-detect:hover {
+            background: #218838;
+        }
+
+        .status-message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+            display: block;
+        }
+
+        .status-message.success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+            display: block;
+        }
+
+        .status-message.info {
+            background: #eef;
+            color: #33c;
+            border: 1px solid #ccf;
+            display: block;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐢 TurtleLootLine Setup</h1>
+        <p class="subtitle">Configure your desktop companion to sync gear data</p>
+
+        <form id="setupForm">
+            <div class="form-group">
+                <label for="syncToken">Sync Token</label>
+                <input
+                    type="text"
+                    id="syncToken"
+                    placeholder="ttl_abc123..."
+                    required
+                >
+                <p class="help-text">Get your sync token from the TurtleLootLine website</p>
+            </div>
+
+            <div class="form-group">
+                <label for="wowPath">World of Warcraft Installation Path</label>
+                <div class="path-input-group">
+                    <input
+                        type="text"
+                        id="wowPath"
+                        placeholder="C:\Games\Turtle WoW"
+                        required
+                    >
+                    <button type="button" class="btn-secondary" id="browsePath">Browse</button>
+                </div>
+                <button type="button" class="btn-auto-detect" id="autoDetect">🔍 Auto-detect</button>
+                <p class="help-text">Path to your Turtle WoW folder (contains WTF and Interface folders)</p>
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="autoStart" checked>
+                    <label for="autoStart" style="margin: 0;">Start with system</label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" id="saveButton">
+                Save & Start
+            </button>
+        </form>
+
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('setupForm');
+        const statusMessage = document.getElementById('statusMessage');
+        const saveButton = document.getElementById('saveButton');
+
+        // Auto-detect WoW path
+        document.getElementById('autoDetect').addEventListener('click', async () => {
+            statusMessage.className = 'status-message info';
+            statusMessage.textContent = 'Detecting WoW installation...';
+            statusMessage.style.display = 'block';
+
+            const detectedPath = await window.electronAPI.detectWowPath();
+
+            if (detectedPath) {
+                document.getElementById('wowPath').value = detectedPath;
+                statusMessage.className = 'status-message success';
+                statusMessage.textContent = `✓ Found WoW installation at: ${detectedPath}`;
+            } else {
+                statusMessage.className = 'status-message error';
+                statusMessage.textContent = 'Could not auto-detect WoW path. Please browse manually.';
+            }
+        });
+
+        // Browse for folder
+        document.getElementById('browsePath').addEventListener('click', async () => {
+            const selectedPath = await window.electronAPI.selectFolder();
+            if (selectedPath) {
+                document.getElementById('wowPath').value = selectedPath;
+            }
+        });
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const config = {
+                syncToken: document.getElementById('syncToken').value.trim(),
+                wowPath: document.getElementById('wowPath').value.trim(),
+                autoStart: document.getElementById('autoStart').checked,
+                syncIntervalMinutes: 5
+            };
+
+            // Validate inputs
+            if (!config.syncToken || !config.wowPath) {
+                statusMessage.className = 'status-message error';
+                statusMessage.textContent = 'Please fill in all required fields';
+                statusMessage.style.display = 'block';
+                return;
+            }
+
+            // Disable button and show loading
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+            statusMessage.className = 'status-message info';
+            statusMessage.textContent = 'Validating configuration...';
+            statusMessage.style.display = 'block';
+
+            try {
+                const result = await window.electronAPI.saveConfig(config);
+
+                if (result.success) {
+                    statusMessage.className = 'status-message success';
+                    statusMessage.textContent = '✓ Setup complete! Starting companion...';
+
+                    setTimeout(() => {
+                        window.close();
+                    }, 2000);
+                } else {
+                    throw new Error(result.error || 'Failed to save configuration');
+                }
+            } catch (error) {
+                statusMessage.className = 'status-message error';
+                statusMessage.textContent = `Error: ${error.message}`;
+                saveButton.disabled = false;
+                saveButton.textContent = 'Save & Start';
+            }
+        });
+    </script>
+</body>
+</html>
