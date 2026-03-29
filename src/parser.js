@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 class LuaParser {
   /**
@@ -158,6 +159,67 @@ class LuaParser {
 
     // Default: return as string
     return value;
+  }
+
+  /**
+   * Parse GearSyncLootDB from account-level SavedVariables file
+   * @param {string} filePath Path to account-level GearSync.lua
+   * @returns {Object|null} Parsed loot DB or null
+   */
+  static parseLootDB(filePath) {
+    try {
+      if (!fs.existsSync(filePath)) {
+        return null;
+      }
+
+      const content = fs.readFileSync(filePath, 'utf8');
+
+      // Extract GearSyncLootDB table
+      const match = content.match(/GearSyncLootDB\s*=\s*(\{[\s\S]*?\n\})/);
+
+      if (!match) {
+        console.log(`No GearSyncLootDB found in ${filePath}`);
+        return null;
+      }
+
+      const luaTable = match[1];
+      const parsed = this.luaTableToJson(luaTable);
+
+      return parsed;
+    } catch (error) {
+      console.error('Error parsing LootDB:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find account-level SavedVariables file containing GearSyncLootDB
+   * @param {string} wowPath Root WoW installation path
+   * @returns {Array<{account: string, filePath: string}>} Account files found
+   */
+  static findAccountSavedVariables(wowPath) {
+    const results = [];
+    const wtfPath = path.join(wowPath, 'WTF', 'Account');
+
+    if (!fs.existsSync(wtfPath)) return results;
+
+    try {
+      const accounts = fs.readdirSync(wtfPath);
+      for (const account of accounts) {
+        const accountPath = path.join(wtfPath, account);
+        if (!fs.statSync(accountPath).isDirectory()) continue;
+        if (account === 'SavedVariables') continue;
+
+        const svFile = path.join(accountPath, 'SavedVariables', 'GearSync.lua');
+        if (fs.existsSync(svFile)) {
+          results.push({ account, filePath: svFile });
+        }
+      }
+    } catch (error) {
+      console.error('Error finding account SavedVariables:', error);
+    }
+
+    return results;
   }
 
   /**

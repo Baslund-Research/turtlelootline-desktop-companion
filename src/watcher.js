@@ -3,9 +3,10 @@ const path = require('path');
 const Parser = require('./parser');
 
 class SavedVariablesWatcher {
-  constructor(wowPath, onUpdate) {
+  constructor(wowPath, onUpdate, onLootUpdate) {
     this.wowPath = wowPath;
     this.onUpdate = onUpdate;
+    this.onLootUpdate = onLootUpdate;
     this.watcher = null;
   }
 
@@ -13,8 +14,8 @@ class SavedVariablesWatcher {
    * Start watching SavedVariables files
    */
   start() {
-    // Watch all GearSync.lua files in SavedVariables folders
-    const globPattern = path.join(
+    // Watch per-character GearSync.lua files
+    const charPattern = path.join(
       this.wowPath,
       'WTF',
       'Account',
@@ -25,9 +26,20 @@ class SavedVariablesWatcher {
       'GearSync.lua'
     );
 
-    console.log(`Starting file watcher for pattern: ${globPattern}`);
+    // Watch account-level GearSync.lua files (where GearSyncLootDB lives)
+    const accountPattern = path.join(
+      this.wowPath,
+      'WTF',
+      'Account',
+      '*',
+      'SavedVariables',
+      'GearSync.lua'
+    );
 
-    this.watcher = chokidar.watch(globPattern, {
+    console.log(`Starting file watcher for character pattern: ${charPattern}`);
+    console.log(`Starting file watcher for account pattern: ${accountPattern}`);
+
+    this.watcher = chokidar.watch([charPattern, accountPattern], {
       persistent: true,
       ignoreInitial: false,
       awaitWriteFinish: {
@@ -68,15 +80,49 @@ class SavedVariablesWatcher {
   }
 
   /**
+   * Check if a file is an account-level SavedVariables (not per-character)
+   * Account-level: WTF/Account/<ACCOUNT>/SavedVariables/GearSync.lua
+   * Per-character:  WTF/Account/<ACCOUNT>/<REALM>/<CHAR>/SavedVariables/GearSync.lua
+   * @param {string} filePath Path to check
+   * @returns {boolean} True if account-level
+   */
+  isAccountLevel(filePath) {
+    const normalized = filePath.replace(/\\/g, '/');
+    // Account-level has exactly one folder between "Account" and "SavedVariables"
+    const match = normalized.match(/Account\/([^/]+)\/SavedVariables\/GearSync\.lua$/);
+    return !!match;
+  }
+
+  /**
+   * Extract account name from file path
+   * @param {string} filePath Path to GearSync.lua
+   * @returns {string|null} Account name
+   */
+  extractAccount(filePath) {
+    const normalized = filePath.replace(/\\/g, '/');
+    const match = normalized.match(/Account\/([^/]+)\//);
+    return match ? match[1] : null;
+  }
+
+  /**
    * Handle file change event
    * @param {string} filePath Path to changed file
    */
   handleFileChange(filePath) {
     try {
-      const data = Parser.parseSavedVariables(filePath);
-
-      if (data && this.onUpdate) {
-        this.onUpdate(data);
+      if (this.isAccountLevel(filePath)) {
+        // Account-level file — trigger loot sync
+        console.log(`Account-level SavedVariables changed: ${filePath}`);
+        const account = this.extractAccount(filePath);
+        if (this.onLootUpdate) {
+          this.onLootUpdate(filePath, account);
+        }
+      } else {
+        // Per-character file — trigger equipment sync (existing behavior)
+        const data = Parser.parseSavedVariables(filePath);
+        if (data && this.onUpdate) {
+          this.onUpdate(data);
+        }
       }
     } catch (error) {
       console.error(`Error parsing ${filePath}:`, error);

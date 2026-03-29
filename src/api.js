@@ -141,6 +141,37 @@ class TurtleLootLineAPI {
   }
 
   /**
+   * Bulk sync collected item data to the API
+   * @param {string} account Account name
+   * @param {string} realm Realm name
+   * @param {Array} items Array of item objects
+   * @returns {Promise<Object>} API response with created/updated counts
+   */
+  async bulkSyncItems(account, realm, items) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/items/bulk-sync`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          account,
+          realm,
+          syncTimestamp: Math.floor(Date.now() / 1000),
+          items
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error bulk syncing items:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Generate mock upgrade data for testing
    * @param {Array<number>} itemIds Item IDs to generate data for
    * @returns {Object} Mock upgrade data

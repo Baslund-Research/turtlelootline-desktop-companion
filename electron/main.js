@@ -9,6 +9,7 @@ const Scanner = require('../src/scanner');
 const Watcher = require('../src/watcher');
 const API = require('../src/api');
 const Cache = require('../src/cache');
+const LootSync = require('../src/loot-sync');
 
 // Initialize electron-store for config
 const store = new Store({
@@ -32,6 +33,7 @@ let setupWindow = null;
 let settingsWindow = null;
 let watcher = null;
 let api = null;
+let lootSync = null;
 
 // Ensure single instance
 const gotTheLock = app.requestSingleInstanceLock();
@@ -96,11 +98,14 @@ function initializeApp() {
   // Initialize API client
   api = new API(syncToken);
 
+  // Initialize loot sync
+  lootSync = new LootSync(api);
+
   // Scan for characters initially
   scanAndSyncCharacters(wowPath);
 
-  // Start watching SavedVariables
-  watcher = new Watcher(wowPath, handleSavedVariablesUpdate);
+  // Start watching SavedVariables (per-character + account-level)
+  watcher = new Watcher(wowPath, handleSavedVariablesUpdate, handleLootDBUpdate);
   watcher.start();
 
   // Set up periodic sync
@@ -183,11 +188,41 @@ async function handleSavedVariablesUpdate(data) {
   }
 }
 
+// Handle account-level SavedVariables updates (loot data)
+async function handleLootDBUpdate(filePath, account) {
+  try {
+    if (!lootSync || !account) return;
+
+    console.log(`Loot DB update detected for account: ${account}`);
+    if (tray) tray.setStatus('syncing');
+
+    const result = await lootSync.syncFromFile(filePath, account);
+    console.log(`Loot sync complete: ${result.synced} synced, ${result.skipped} skipped`);
+
+    if (tray) {
+      tray.updateLastSync();
+      tray.setStatus('connected');
+    }
+  } catch (error) {
+    console.error('Error handling loot DB update:', error);
+    if (tray) tray.setStatus('error');
+  }
+}
+
 // Manual sync triggered from tray
 function handleSyncNow() {
   const wowPath = store.get('wowPath');
   if (wowPath) {
     scanAndSyncCharacters(wowPath);
+
+    // Also sync loot data
+    if (lootSync) {
+      lootSync.syncAll(wowPath).then(result => {
+        console.log(`Manual loot sync: ${result.synced} synced, ${result.skipped} skipped`);
+      }).catch(error => {
+        console.error('Manual loot sync error:', error);
+      });
+    }
   }
 }
 
