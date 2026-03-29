@@ -5,217 +5,417 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TurtleLootLine Setup</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            font-size: 13px;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Title bar */
+        .titlebar {
+            background: #181825;
+            padding: 16px 20px;
+            border-bottom: 1px solid #313244;
+            -webkit-app-region: drag;
+            flex-shrink: 0;
+        }
+
+        .titlebar-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .titlebar-icon {
+            width: 24px;
+            height: 24px;
+            background: #a6e3a1;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .titlebar h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #cdd6f4;
+        }
+
+        .titlebar .subtitle {
+            font-size: 12px;
+            color: #6c7086;
+            padding-left: 34px;
+        }
+
+        /* Steps indicator */
+        .steps {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            padding: 14px 20px;
+            background: #181825;
+            border-bottom: 1px solid #313244;
+            flex-shrink: 0;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #585b70;
+        }
+
+        .step.active {
+            color: #89b4fa;
+        }
+
+        .step.done {
+            color: #a6e3a1;
+        }
+
+        .step-num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1.5px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .step.active .step-num {
+            background: #89b4fa;
+            color: #1e1e2e;
+            border-color: #89b4fa;
+        }
+
+        .step.done .step-num {
+            background: #a6e3a1;
+            color: #1e1e2e;
+            border-color: #a6e3a1;
+        }
+
+        .step-line {
+            width: 40px;
+            height: 1px;
+            background: #313244;
+            margin: 0 8px;
+        }
+
+        /* Main content */
+        .content {
+            flex: 1;
+            overflow-y: auto;
             padding: 20px;
-            color: #333;
         }
 
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        h1 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 24px;
-        }
-
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        .form-group {
+        /* Sections */
+        .section {
             margin-bottom: 20px;
         }
 
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-            font-size: 14px;
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #6c7086;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #313244;
         }
 
+        /* Form rows */
+        .form-row {
+            margin-bottom: 14px;
+        }
+
+        .form-row label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #bac2de;
+            margin-bottom: 5px;
+        }
+
+        .form-row .hint {
+            font-size: 11px;
+            color: #585b70;
+            margin-top: 3px;
+        }
+
+        .form-row .hint a {
+            color: #89b4fa;
+            text-decoration: none;
+        }
+
+        /* Inputs */
         input[type="text"] {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.3s;
+            padding: 8px 10px;
+            background: #313244;
+            border: 1px solid #45475a;
+            border-radius: 4px;
+            color: #cdd6f4;
+            font-size: 13px;
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+            outline: none;
+            transition: border-color 0.2s;
         }
 
         input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
+            border-color: #89b4fa;
         }
 
-        .path-input-group {
+        /* Path row */
+        .path-row {
             display: flex;
-            gap: 10px;
-        }
-
-        .path-input-group input {
-            flex: 1;
-        }
-
-        button {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-primary:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-
-        .btn-auto-detect {
-            background: #28a745;
-            color: white;
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-
-        .btn-auto-detect:hover {
-            background: #218838;
-        }
-
-        .status-message {
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .status-message.error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
-            display: block;
-        }
-
-        .status-message.success {
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
-            display: block;
-        }
-
-        .status-message.info {
-            background: #eef;
-            color: #33c;
-            border: 1px solid #ccf;
-            display: block;
-        }
-
-        .help-text {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
             gap: 8px;
         }
 
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+        .path-row input { flex: 1; }
+
+        /* Buttons */
+        .btn {
+            padding: 7px 14px;
+            border: 1px solid #45475a;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #bac2de;
+            border-color: #45475a;
+        }
+
+        .btn-ghost:hover {
+            background: #313244;
+            border-color: #585b70;
+        }
+
+        .btn-detect {
+            background: rgba(166, 227, 161, 0.1);
+            color: #a6e3a1;
+            border-color: rgba(166, 227, 161, 0.3);
+            margin-top: 6px;
+        }
+
+        .btn-detect:hover {
+            background: rgba(166, 227, 161, 0.2);
+        }
+
+        .btn-primary {
+            background: #89b4fa;
+            color: #1e1e2e;
+            border-color: #89b4fa;
+        }
+
+        .btn-primary:hover {
+            background: #74c7ec;
+            border-color: #74c7ec;
+        }
+
+        .btn-primary:disabled {
+            background: #45475a;
+            border-color: #45475a;
+            color: #6c7086;
+            cursor: not-allowed;
+        }
+
+        /* Toggle switch */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .toggle-row .toggle-label {
+            font-size: 13px;
+            color: #bac2de;
+        }
+
+        .toggle-row .toggle-hint {
+            font-size: 11px;
+            color: #585b70;
+        }
+
+        .switch {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #45475a;
+            border-radius: 20px;
+            transition: 0.2s;
+        }
+
+        .slider:before {
+            content: "";
+            position: absolute;
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background: #cdd6f4;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+        .switch input:checked + .slider {
+            background: #a6e3a1;
+        }
+
+        .switch input:checked + .slider:before {
+            transform: translateX(16px);
+            background: #1e1e2e;
+        }
+
+        /* Footer bar */
+        .footer {
+            background: #181825;
+            border-top: 1px solid #313244;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        /* Status toast */
+        .status {
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status.error {
+            display: inline-block;
+            background: rgba(243, 139, 168, 0.15);
+            color: #f38ba8;
+            border: 1px solid rgba(243, 139, 168, 0.3);
+        }
+
+        .status.success {
+            display: inline-block;
+            background: rgba(166, 227, 161, 0.15);
+            color: #a6e3a1;
+            border: 1px solid rgba(166, 227, 161, 0.3);
+        }
+
+        .status.info {
+            display: inline-block;
+            background: rgba(137, 180, 250, 0.15);
+            color: #89b4fa;
+            border: 1px solid rgba(137, 180, 250, 0.3);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🐢 TurtleLootLine Setup</h1>
-        <p class="subtitle">Configure your desktop companion to sync gear data</p>
+    <div class="titlebar">
+        <div class="titlebar-top">
+            <div class="titlebar-icon"></div>
+            <h1>TurtleLootLine</h1>
+        </div>
+        <div class="subtitle">Desktop companion setup</div>
+    </div>
 
+    <div class="steps">
+        <div class="step active" id="step1">
+            <div class="step-num">1</div>
+            <span>Token</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step2">
+            <div class="step-num">2</div>
+            <span>Game Path</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step3">
+            <div class="step-num">3</div>
+            <span>Preferences</span>
+        </div>
+    </div>
+
+    <div class="content">
         <form id="setupForm">
-            <div class="form-group">
-                <label for="syncToken">Sync Token</label>
-                <input
-                    type="text"
-                    id="syncToken"
-                    placeholder="ttl_abc123..."
-                    required
-                >
-                <p class="help-text">Get your sync token from the TurtleLootLine website</p>
-            </div>
-
-            <div class="form-group">
-                <label for="wowPath">World of Warcraft Installation Path</label>
-                <div class="path-input-group">
-                    <input
-                        type="text"
-                        id="wowPath"
-                        placeholder="C:\Games\Turtle WoW"
-                        required
-                    >
-                    <button type="button" class="btn-secondary" id="browsePath">Browse</button>
-                </div>
-                <button type="button" class="btn-auto-detect" id="autoDetect">🔍 Auto-detect</button>
-                <p class="help-text">Path to your Turtle WoW folder (contains WTF and Interface folders)</p>
-            </div>
-
-            <div class="form-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="autoStart" checked>
-                    <label for="autoStart" style="margin: 0;">Start with system</label>
+            <div class="section">
+                <div class="section-title">Authentication</div>
+                <div class="form-row">
+                    <label for="syncToken">Sync Token</label>
+                    <input type="text" id="syncToken" placeholder="ttl_abc123..." required>
+                    <div class="hint">Get your token from <a href="#" onclick="window.electronAPI.openExternal('https://turtlelootline.com'); return false;">turtlelootline.com</a></div>
                 </div>
             </div>
 
-            <button type="submit" class="btn-primary" id="saveButton">
-                Save & Start
-            </button>
+            <div class="section">
+                <div class="section-title">Game Location</div>
+                <div class="form-row">
+                    <label for="wowPath">WoW Installation Path</label>
+                    <div class="path-row">
+                        <input type="text" id="wowPath" placeholder="C:\Games\Turtle WoW" required>
+                        <button type="button" class="btn btn-ghost" id="browsePath">Browse</button>
+                    </div>
+                    <button type="button" class="btn btn-detect" id="autoDetect">Auto-detect</button>
+                    <div class="hint">Folder containing WTF and Interface directories</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Preferences</div>
+                <div class="toggle-row">
+                    <div>
+                        <div class="toggle-label">Start with system</div>
+                        <div class="toggle-hint">Launch when Windows starts</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="autoStart" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
         </form>
+    </div>
 
-        <div id="statusMessage" class="status-message"></div>
+    <div class="footer">
+        <span id="statusMessage" class="status"></span>
+        <div class="footer-actions">
+            <button type="submit" class="btn btn-primary" id="saveButton" form="setupForm">Save & Start</button>
+        </div>
     </div>
 
     <script>
@@ -223,33 +423,48 @@
         const statusMessage = document.getElementById('statusMessage');
         const saveButton = document.getElementById('saveButton');
 
-        // Auto-detect WoW path
+        // Update step indicators based on filled fields
+        function updateSteps() {
+            const token = document.getElementById('syncToken').value.trim();
+            const path = document.getElementById('wowPath').value.trim();
+
+            const s1 = document.getElementById('step1');
+            const s2 = document.getElementById('step2');
+            const s3 = document.getElementById('step3');
+
+            s1.className = token ? 'step done' : 'step active';
+            s2.className = token && path ? 'step done' : (token ? 'step active' : 'step');
+            s3.className = token && path ? 'step active' : 'step';
+        }
+
+        document.getElementById('syncToken').addEventListener('input', updateSteps);
+        document.getElementById('wowPath').addEventListener('input', updateSteps);
+
         document.getElementById('autoDetect').addEventListener('click', async () => {
-            statusMessage.className = 'status-message info';
-            statusMessage.textContent = 'Detecting WoW installation...';
-            statusMessage.style.display = 'block';
+            statusMessage.className = 'status info';
+            statusMessage.textContent = 'Detecting...';
 
             const detectedPath = await window.electronAPI.detectWowPath();
 
             if (detectedPath) {
                 document.getElementById('wowPath').value = detectedPath;
-                statusMessage.className = 'status-message success';
-                statusMessage.textContent = `✓ Found WoW installation at: ${detectedPath}`;
+                statusMessage.className = 'status success';
+                statusMessage.textContent = 'Found: ' + detectedPath;
+                updateSteps();
             } else {
-                statusMessage.className = 'status-message error';
-                statusMessage.textContent = 'Could not auto-detect WoW path. Please browse manually.';
+                statusMessage.className = 'status error';
+                statusMessage.textContent = 'Not found. Browse manually.';
             }
         });
 
-        // Browse for folder
         document.getElementById('browsePath').addEventListener('click', async () => {
             const selectedPath = await window.electronAPI.selectFolder();
             if (selectedPath) {
                 document.getElementById('wowPath').value = selectedPath;
+                updateSteps();
             }
         });
 
-        // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -260,37 +475,30 @@
                 syncIntervalMinutes: 5
             };
 
-            // Validate inputs
             if (!config.syncToken || !config.wowPath) {
-                statusMessage.className = 'status-message error';
-                statusMessage.textContent = 'Please fill in all required fields';
-                statusMessage.style.display = 'block';
+                statusMessage.className = 'status error';
+                statusMessage.textContent = 'Fill in all fields';
                 return;
             }
 
-            // Disable button and show loading
             saveButton.disabled = true;
             saveButton.textContent = 'Saving...';
-            statusMessage.className = 'status-message info';
-            statusMessage.textContent = 'Validating configuration...';
-            statusMessage.style.display = 'block';
+            statusMessage.className = 'status info';
+            statusMessage.textContent = 'Validating...';
 
             try {
                 const result = await window.electronAPI.saveConfig(config);
 
                 if (result.success) {
-                    statusMessage.className = 'status-message success';
-                    statusMessage.textContent = '✓ Setup complete! Starting companion...';
-
-                    setTimeout(() => {
-                        window.close();
-                    }, 2000);
+                    statusMessage.className = 'status success';
+                    statusMessage.textContent = result.warning ? result.warning : 'Ready!';
+                    setTimeout(() => { window.close(); }, 2000);
                 } else {
-                    throw new Error(result.error || 'Failed to save configuration');
+                    throw new Error(result.error || 'Save failed');
                 }
             } catch (error) {
-                statusMessage.className = 'status-message error';
-                statusMessage.textContent = `Error: ${error.message}`;
+                statusMessage.className = 'status error';
+                statusMessage.textContent = error.message;
                 saveButton.disabled = false;
                 saveButton.textContent = 'Save & Start';
             }

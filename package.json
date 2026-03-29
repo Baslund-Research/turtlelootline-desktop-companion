@@ -1,22 +1,32 @@
 {
   "name": "turtlelootline-companion",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Desktop companion for TurtleLootLine - syncs WoW gear data",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "build": "electron-builder",
+    "build": "electron-builder --win --mac",
+    "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win"
+    "release": "npm version patch --no-git-tag-version && electron-builder --win --mac --publish always && node -e \"const p=require('./package.json'); const {execSync}=require('child_process'); execSync('git add -A && git commit -m \"release v'+p.version+'\" && git tag v'+p.version+' && git push && git push --tags', {stdio:'inherit'})\"",
+    "release:minor": "npm version minor --no-git-tag-version && electron-builder --win --mac --publish always && node -e \"const p=require('./package.json'); const {execSync}=require('child_process'); execSync('git add -A && git commit -m \"release v'+p.version+'\" && git tag v'+p.version+' && git push && git push --tags', {stdio:'inherit'})\"",
+    "release:major": "npm version major --no-git-tag-version && electron-builder --win --mac --publish always && node -e \"const p=require('./package.json'); const {execSync}=require('child_process'); execSync('git add -A && git commit -m \"release v'+p.version+'\" && git tag v'+p.version+' && git push && git push --tags', {stdio:'inherit'})\"",
+    "release:win": "npm version patch --no-git-tag-version && electron-builder --win --publish always",
+    "release:mac": "npm version patch --no-git-tag-version && electron-builder --mac --publish always"
   },
-  "keywords": ["turtle-wow", "gearscore", "electron"],
+  "keywords": [
+    "turtle-wow",
+    "gearscore",
+    "electron"
+  ],
   "author": "Ronni",
   "license": "MIT",
   "dependencies": {
     "auto-launch": "^5.0.6",
     "chokidar": "^3.5.3",
     "electron-store": "^8.1.0",
+    "electron-updater": "^6.8.3",
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
@@ -26,6 +36,13 @@
   "build": {
     "appId": "com.turtlelootline.companion",
     "productName": "TurtleLootLine Companion",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Ronni",
+        "repo": "turtlelootline-desktop-companion"
+      }
+    ],
     "directories": {
       "output": "dist"
     },
@@ -38,12 +55,21 @@
     ],
     "mac": {
       "category": "public.app-category.utilities",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "assets/icon.png"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis"
+      ],
       "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false
     }
   }
 }

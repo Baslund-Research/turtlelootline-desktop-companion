@@ -14,15 +14,18 @@ class TurtleLootLineTray {
   }
 
   createTray() {
-    // Create tray icon
-    // For now, we'll use a simple icon - you can replace with actual icon file
+    // Create tray icon - use 16x16 tray-specific icon on Windows
+    const trayIconPath = path.join(__dirname, '../assets/tray-icon.png');
     const iconPath = path.join(__dirname, '../assets/icon.png');
     let icon;
 
     try {
-      icon = nativeImage.createFromPath(iconPath);
+      // Try tray-specific icon first (16x16), then fall back to main icon
+      icon = nativeImage.createFromPath(trayIconPath);
       if (icon.isEmpty()) {
-        // Fallback: create a simple colored square
+        icon = nativeImage.createFromPath(iconPath);
+      }
+      if (icon.isEmpty()) {
         icon = this.createFallbackIcon();
       }
     } catch (error) {

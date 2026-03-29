@@ -103,10 +103,10 @@ class LootSync {
           totalSynced += batch.length;
           console.log(`Batch synced: ${result.created || 0} created, ${result.updated || 0} updated`);
         } else {
-          console.error('Batch sync failed:', result);
+          console.warn(`Batch sync: API returned failure — ${result.error || 'unknown error'}`);
         }
       } catch (error) {
-        console.error('Error syncing batch:', error);
+        console.warn(`Batch sync failed: ${error.message}`);
       }
     }
 

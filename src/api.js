@@ -6,6 +6,41 @@ class TurtleLootLineAPI {
   constructor(syncToken) {
     this.syncToken = syncToken;
     this.baseUrl = API_BASE;
+    this.apiAvailable = true;       // Circuit breaker flag
+    this.lastFailTime = 0;
+    this.cooldownMs = 5 * 60 * 1000; // 5 min cooldown after failure
+  }
+
+  /**
+   * Check if API is available (circuit breaker)
+   * Resets after cooldown period
+   */
+  isAvailable() {
+    if (this.apiAvailable) return true;
+    if (Date.now() - this.lastFailTime > this.cooldownMs) {
+      this.apiAvailable = true;
+      console.log('API circuit breaker reset — retrying');
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Mark API as unavailable (trip circuit breaker)
+   */
+  tripBreaker(reason) {
+    if (this.apiAvailable) {
+      console.warn(`API unavailable — pausing requests for 5 min (${reason})`);
+    }
+    this.apiAvailable = false;
+    this.lastFailTime = Date.now();
+  }
+
+  /**
+   * Manually reset circuit breaker (e.g. manual sync)
+   */
+  resetBreaker() {
+    this.apiAvailable = true;
   }
 
   /**
@@ -43,6 +78,8 @@ class TurtleLootLineAPI {
    * @returns {Promise<Object>} API response
    */
   async syncCharacters(characters) {
+    if (!this.isAvailable()) return { skipped: true };
+
     try {
       const charactersData = characters.map(char => ({
         name: char.name,
@@ -57,13 +94,14 @@ class TurtleLootLineAPI {
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
+        this.tripBreaker(`${response.status} ${response.statusText}`);
+        return { success: false, error: `${response.status}` };
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Error syncing characters:', error);
-      throw error;
+      this.tripBreaker(error.message);
+      return { success: false, error: error.message };
     }
   }
 
@@ -75,6 +113,8 @@ class TurtleLootLineAPI {
    * @returns {Promise<Object>} API response
    */
   async updateEquipment(characterName, realm, equipment) {
+    if (!this.isAvailable()) return { skipped: true };
+
     try {
       // Convert equipment object to array format expected by API
       const equipmentArray = Object.entries(equipment).map(([slotId, item]) => ({
@@ -97,13 +137,14 @@ class TurtleLootLineAPI {
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
+        this.tripBreaker(`${response.status} ${response.statusText}`);
+        return { success: false, error: `${response.status}` };
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Error updating equipment:', error);
-      throw error;
+      this.tripBreaker(error.message);
+      return { success: false, error: error.message };
     }
   }
 
@@ -114,6 +155,8 @@ class TurtleLootLineAPI {
    * @returns {Promise<Object>} Upgrade data keyed by item ID
    */
   async getUpgrades(itemIds, characterName) {
+    if (!this.isAvailable()) return {};
+
     try {
       const params = new URLSearchParams({
         itemIds: itemIds.join(','),
@@ -126,16 +169,14 @@ class TurtleLootLineAPI {
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
+        this.tripBreaker(`${response.status} ${response.statusText}`);
+        return {};
       }
 
       const data = await response.json();
-
-      // Expected format: { itemId: { stamina: "+15", armor: "+120", ... }, ... }
       return data.upgrades || {};
     } catch (error) {
-      console.error('Error fetching upgrades:', error);
-      // Return empty object on error so app can continue
+      this.tripBreaker(error.message);
       return {};
     }
   }
@@ -148,6 +189,8 @@ class TurtleLootLineAPI {
    * @returns {Promise<Object>} API response with created/updated counts
    */
   async bulkSyncItems(account, realm, items) {
+    if (!this.isAvailable()) return { success: false, error: 'API paused (circuit breaker)' };
+
     try {
       const response = await fetch(`${this.baseUrl}/api/items/bulk-sync`, {
         method: 'POST',
@@ -161,12 +204,11 @@ class TurtleLootLineAPI {
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
+        return { success: false, error: `${response.status} ${response.statusText}` };
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Error bulk syncing items:', error);
       return { success: false, error: error.message };
     }
   }

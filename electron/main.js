@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const AutoLaunch = require('auto-launch');
 const Store = require('electron-store');
+const { autoUpdater } = require('electron-updater');
 
 const Tray = require('./tray');
 const Scanner = require('../src/scanner');
@@ -34,6 +35,15 @@ let settingsWindow = null;
 let watcher = null;
 let api = null;
 let lootSync = null;
+
+// Prevent crashes from unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.warn('Unhandled promise rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
 
 // Ensure single instance
 const gotTheLock = app.requestSingleInstanceLock();
@@ -71,6 +81,36 @@ app.whenReady().then(async () => {
   if (store.get('autoStart')) {
     autoLauncher.enable();
   }
+
+  // Auto-updater — check for updates silently
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = {
+    info: (msg) => console.log('[updater]', msg),
+    warn: (msg) => console.warn('[updater]', msg),
+    error: (msg) => console.error('[updater]', msg),
+  };
+
+  autoUpdater.on('update-available', (info) => {
+    console.log(`[updater] Update available: v${info.version}`);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log(`[updater] Update downloaded: v${info.version} — will install on quit`);
+    if (tray) {
+      tray.tray.setToolTip(`TurtleLootLine Companion — Update v${info.version} ready, restart to install`);
+    }
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.warn('[updater] Update check failed:', err.message);
+  });
+
+  // Check now, then every 4 hours
+  autoUpdater.checkForUpdates().catch(() => {});
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch(() => {});
+  }, 4 * 60 * 60 * 1000);
 });
 
 app.on('window-all-closed', (e) => {
@@ -130,8 +170,12 @@ async function scanAndSyncCharacters(wowPath) {
     console.log(`Found ${characters.length} characters`);
 
     if (api && characters.length > 0) {
-      await api.syncCharacters(characters);
-      console.log('Characters synced to API');
+      try {
+        await api.syncCharacters(characters);
+        console.log('Characters synced to API');
+      } catch (syncError) {
+        console.warn('Character sync failed (API may not be ready):', syncError.message);
+      }
     }
 
     if (tray) {
@@ -140,21 +184,19 @@ async function scanAndSyncCharacters(wowPath) {
       tray.setStatus('connected');
     }
   } catch (error) {
-    console.error('Error scanning/syncing characters:', error);
-    if (tray) tray.setStatus('error');
+    console.warn('Error scanning characters:', error.message);
+    if (tray) tray.setStatus('connected');
   }
 }
 
 // Handle SavedVariables file updates
 async function handleSavedVariablesUpdate(data) {
   try {
-    console.log(`SavedVariables updated for ${data.character} on ${data.realm}`);
+    console.log(`Equipment update: ${data.character} (${data.realm})`);
 
     if (!api) return;
 
-    if (tray) tray.setStatus('syncing');
-
-    // Update equipment on API
+    // Update equipment on API (won't throw — circuit breaker handles failures)
     await api.updateEquipment(data.character, data.realm, data.equipment);
 
     // Get item IDs from equipment
@@ -163,19 +205,17 @@ async function handleSavedVariablesUpdate(data) {
       .map(item => item.itemId);
 
     if (itemIds.length > 0) {
-      // Fetch upgrade data from API
       const upgrades = await api.getUpgrades(itemIds, data.character);
 
-      // Update local cache
-      const cache = new Cache();
-      cache.updateUpgrades(upgrades);
+      if (Object.keys(upgrades).length > 0) {
+        const cache = new Cache();
+        cache.updateUpgrades(upgrades);
 
-      // Generate UpgradeData.lua for the addon
-      const Generator = require('../src/generator');
-      const wowPath = store.get('wowPath');
-      Generator.generateUpgradeData(cache.getAllUpgrades(), wowPath);
-
-      console.log('Upgrade data generated');
+        const Generator = require('../src/generator');
+        const wowPath = store.get('wowPath');
+        Generator.generateUpgradeData(cache.getAllUpgrades(), wowPath);
+        console.log('Upgrade data generated');
+      }
     }
 
     if (tray) {
@@ -183,8 +223,7 @@ async function handleSavedVariablesUpdate(data) {
       tray.setStatus('connected');
     }
   } catch (error) {
-    console.error('Error handling SavedVariables update:', error);
-    if (tray) tray.setStatus('error');
+    console.warn('SavedVariables handler error:', error.message);
   }
 }
 
@@ -197,15 +236,15 @@ async function handleLootDBUpdate(filePath, account) {
     if (tray) tray.setStatus('syncing');
 
     const result = await lootSync.syncFromFile(filePath, account);
-    console.log(`Loot sync complete: ${result.synced} synced, ${result.skipped} skipped`);
+    console.log(`Loot sync: ${result.synced} synced, ${result.skipped} unchanged`);
 
     if (tray) {
       tray.updateLastSync();
       tray.setStatus('connected');
     }
   } catch (error) {
-    console.error('Error handling loot DB update:', error);
-    if (tray) tray.setStatus('error');
+    console.warn('Loot sync failed (API may not be ready):', error.message);
+    if (tray) tray.setStatus('connected'); // Don't show error state for expected failures
   }
 }
 
@@ -213,6 +252,9 @@ async function handleLootDBUpdate(filePath, account) {
 function handleSyncNow() {
   const wowPath = store.get('wowPath');
   if (wowPath) {
+    // Reset circuit breaker so manual sync always tries the API
+    if (api) api.resetBreaker();
+
     scanAndSyncCharacters(wowPath);
 
     // Also sync loot data
@@ -243,9 +285,13 @@ function showSetupWindow() {
   }
 
   setupWindow = new BrowserWindow({
-    width: 600,
-    height: 500,
-    resizable: false,
+    width: 650,
+    height: 680,
+    minWidth: 500,
+    minHeight: 500,
+    resizable: true,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, '../assets/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -253,7 +299,16 @@ function showSetupWindow() {
     }
   });
 
+  setupWindow.setMenuBarVisibility(false);
   setupWindow.loadFile(path.join(__dirname, '../ui/setup.html'));
+
+  // F12 opens DevTools in a separate window
+  setupWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12') {
+      setupWindow.webContents.toggleDevTools({ mode: 'detach' });
+      event.preventDefault();
+    }
+  });
 
   setupWindow.on('closed', () => {
     setupWindow = null;
@@ -268,9 +323,13 @@ function showSettingsWindow() {
   }
 
   settingsWindow = new BrowserWindow({
-    width: 600,
-    height: 500,
-    resizable: false,
+    width: 650,
+    height: 680,
+    minWidth: 500,
+    minHeight: 500,
+    resizable: true,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, '../assets/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -278,7 +337,16 @@ function showSettingsWindow() {
     }
   });
 
+  settingsWindow.setMenuBarVisibility(false);
   settingsWindow.loadFile(path.join(__dirname, '../ui/settings.html'));
+
+  // F12 opens DevTools in a separate window
+  settingsWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12') {
+      settingsWindow.webContents.toggleDevTools({ mode: 'detach' });
+      event.preventDefault();
+    }
+  });
 
   settingsWindow.on('closed', () => {
     settingsWindow = null;
@@ -297,26 +365,39 @@ ipcMain.handle('get-config', () => {
 
 ipcMain.handle('save-config', async (event, config) => {
   try {
-    // Validate token with API
-    const testApi = new API(config.syncToken);
-    const valid = await testApi.validateToken();
+    // Try to validate token with API, but don't block saving if API is unreachable
+    let tokenValid = false;
+    let validationWarning = null;
 
-    if (!valid) {
-      throw new Error('Invalid sync token');
+    try {
+      const testApi = new API(config.syncToken);
+      tokenValid = await testApi.validateToken();
+    } catch (apiError) {
+      console.warn('Token validation failed (API may be unreachable):', apiError.message);
+      validationWarning = 'Could not reach API to validate token. Config saved anyway.';
     }
 
-    // Save config
+    if (!tokenValid && !validationWarning) {
+      // API was reachable but token was rejected — still save but warn
+      validationWarning = 'Token could not be validated. Config saved — sync may fail until a valid token is provided.';
+    }
+
+    // Save config regardless
     store.set('syncToken', config.syncToken);
     store.set('wowPath', config.wowPath);
     store.set('autoStart', config.autoStart);
     store.set('syncIntervalMinutes', config.syncIntervalMinutes);
     store.set('firstRun', false);
 
-    // Update auto-launch
-    if (config.autoStart) {
-      await autoLauncher.enable();
-    } else {
-      await autoLauncher.disable();
+    // Update auto-launch (can fail on some systems, don't crash)
+    try {
+      if (config.autoStart) {
+        await autoLauncher.enable();
+      } else {
+        await autoLauncher.disable();
+      }
+    } catch (autoLaunchError) {
+      console.warn('Auto-launch setup failed:', autoLaunchError.message);
     }
 
     // Initialize or reinitialize app
@@ -325,7 +406,7 @@ ipcMain.handle('save-config', async (event, config) => {
     }
     initializeApp();
 
-    return { success: true };
+    return { success: true, warning: validationWarning };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -347,4 +428,64 @@ ipcMain.handle('select-folder', async () => {
 ipcMain.handle('detect-wow-path', () => {
   const Scanner = require('../src/scanner');
   return Scanner.detectWowPath();
+});
+
+ipcMain.handle('open-external', (event, url) => {
+  const { shell } = require('electron');
+  if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+    shell.openExternal(url);
+  }
+});
+
+ipcMain.handle('test-token', async (event, token) => {
+  try {
+    const testApi = new API(token);
+    const valid = await testApi.validateToken();
+    return { valid, error: null };
+  } catch (error) {
+    return { valid: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-sync-status', () => {
+  const wowPath = store.get('wowPath');
+  const status = {
+    apiAvailable: api ? api.isAvailable() : false,
+    characters: 0,
+    lootItems: 0,
+    lootSynced: 0,
+    lastSync: null,
+    watcherActive: !!watcher,
+  };
+
+  // Count characters
+  if (wowPath) {
+    try {
+      const scanner = new Scanner(wowPath);
+      status.characters = scanner.scanCharacters().length;
+    } catch (e) {}
+  }
+
+  // Loot stats
+  if (lootSync) {
+    const lootStats = lootSync.getStats();
+    status.lootSynced = lootStats.syncedItemCount;
+    status.lastSync = lootStats.lastSync;
+  }
+
+  // Count loot DB items from file
+  if (wowPath) {
+    try {
+      const Parser = require('../src/parser');
+      const accountFiles = Parser.findAccountSavedVariables(wowPath);
+      for (const { filePath } of accountFiles) {
+        const lootDB = Parser.parseLootDB(filePath);
+        if (lootDB && lootDB.items) {
+          status.lootItems += Object.keys(lootDB.items).length;
+        }
+      }
+    } catch (e) {}
+  }
+
+  return status;
 });
