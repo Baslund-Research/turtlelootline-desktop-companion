@@ -41,6 +41,23 @@
             padding: 20px;
         }
 
+        .content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .content::-webkit-scrollbar-thumb {
+            background: #45475a;
+            border-radius: 3px;
+        }
+
+        .content::-webkit-scrollbar-thumb:hover {
+            background: #585b70;
+        }
+
         /* Sections */
         .section { margin-bottom: 20px; }
 
@@ -390,6 +407,16 @@
 
             <!-- Game -->
             <div class="section">
+                <div class="section-title">Developer</div>
+
+                <div class="form-row">
+                    <label for="apiUrl">API URL Override</label>
+                    <input type="text" id="apiUrl" placeholder="Leave empty for production" style="font-size: 12px;">
+                    <div class="hint">Set to <code style="color: #89b4fa; background: #313244; padding: 1px 4px; border-radius: 2px;">http://localhost:3000</code> for local development</div>
+                </div>
+            </div>
+
+            <div class="section">
                 <div class="section-title">Game</div>
 
                 <div class="form-row">
@@ -451,6 +478,7 @@
             document.getElementById('wowPath').value = config.wowPath || '';
             document.getElementById('syncInterval').value = config.syncIntervalMinutes || 5;
             document.getElementById('autoStart').checked = config.autoStart !== false;
+            document.getElementById('apiUrl').value = config.apiUrl || '';
 
             loadSyncStatus();
         })();
@@ -539,7 +567,8 @@
                 syncToken: document.getElementById('syncToken').value.trim(),
                 wowPath: document.getElementById('wowPath').value.trim(),
                 autoStart: document.getElementById('autoStart').checked,
-                syncIntervalMinutes: parseInt(document.getElementById('syncInterval').value)
+                syncIntervalMinutes: parseInt(document.getElementById('syncInterval').value),
+                apiUrl: document.getElementById('apiUrl').value.trim()
             };
 
             if (!config.syncToken || !config.wowPath) {
