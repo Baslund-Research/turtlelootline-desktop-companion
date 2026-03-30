@@ -1,11 +1,12 @@
 const fetch = require('node-fetch');
 
-const API_BASE = 'https://g4440c8wko4kw8kswsw84c4o.cool.lastcloud.io';
+const API_BASE_PROD = 'https://g4440c8wko4kw8kswsw84c4o.cool.lastcloud.io';
+const API_BASE_DEV = 'http://localhost:3000';
 
 class TurtleLootLineAPI {
-  constructor(syncToken) {
+  constructor(syncToken, apiUrl) {
     this.syncToken = syncToken;
-    this.baseUrl = API_BASE;
+    this.baseUrl = apiUrl || API_BASE_PROD;
     this.apiAvailable = true;       // Circuit breaker flag
     this.lastFailTime = 0;
     this.cooldownMs = 5 * 60 * 1000; // 5 min cooldown after failure
@@ -84,7 +85,10 @@ class TurtleLootLineAPI {
       const charactersData = characters.map(char => ({
         name: char.name,
         realm: char.realm,
-        account: char.account
+        account: char.account,
+        class: char.class || undefined,
+        race: char.race || undefined,
+        level: char.level || undefined
       }));
 
       const response = await fetch(`${this.baseUrl}/api/characters/sync`, {
@@ -106,13 +110,14 @@ class TurtleLootLineAPI {
   }
 
   /**
-   * Update character equipment
+   * Update character equipment and talents
    * @param {string} characterName Character name
    * @param {string} realm Realm name
    * @param {Object} equipment Equipment data
+   * @param {Object} [talents] Talent data (optional)
    * @returns {Promise<Object>} API response
    */
-  async updateEquipment(characterName, realm, equipment) {
+  async updateEquipment(characterName, realm, equipment, talents, characterClass, characterRace, characterLevel) {
     if (!this.isAvailable()) return { skipped: true };
 
     try {
@@ -125,15 +130,33 @@ class TurtleLootLineAPI {
         itemLink: item.itemLink
       }));
 
+      const payload = {
+        character: characterName,
+        realm: realm,
+        equipment: equipmentArray,
+        syncedAt: new Date().toISOString()
+      };
+
+      // Include talent data if available
+      if (talents) {
+        payload.talents = talents;
+      }
+
+      // Include class and race if available
+      if (characterClass) {
+        payload.class = characterClass;
+      }
+      if (characterRace) {
+        payload.race = characterRace;
+      }
+      if (characterLevel) {
+        payload.level = characterLevel;
+      }
+
       const response = await fetch(`${this.baseUrl}/api/characters/equipment`, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
-          character: characterName,
-          realm: realm,
-          equipment: equipmentArray,
-          syncedAt: new Date().toISOString()
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -145,6 +168,85 @@ class TurtleLootLineAPI {
     } catch (error) {
       this.tripBreaker(error.message);
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get full upgrade recommendations for all slots based on character gear
+   * Uses the POST /api/upgrades endpoint (same as the web app's Upgrade Rec tab)
+   * @param {string} characterClass Class name (e.g. "Mage")
+   * @param {number} level Character level
+   * @param {Object} equipment Equipment object keyed by slotId
+   * @returns {Promise<Object>} Upgrade data keyed by item ID
+   */
+  async getFullUpgradeRecommendations(characterClass, level, equipment) {
+    if (!this.isAvailable()) return {};
+
+    try {
+      // Map class + generic role to a profile key
+      const classLower = (characterClass || 'warrior').toLowerCase();
+      const defaultProfiles = {
+        warrior: 'warrior-dps', paladin: 'paladin-tank', hunter: 'hunter-mm',
+        rogue: 'rogue-combat', priest: 'priest-healer', shaman: 'shaman-resto',
+        mage: 'mage-frost', warlock: 'warlock-aff', druid: 'druid-feral'
+      };
+      const profileKey = defaultProfiles[classLower] || `${classLower}-dps`;
+
+      // Convert equipment to gear map (slot name -> itemId)
+      const SLOT_TO_GEAR = {
+        1: 'head', 2: 'neck', 3: 'shoulder', 5: 'chest', 6: 'waist',
+        7: 'legs', 8: 'feet', 9: 'wrist', 10: 'hands', 11: 'finger1',
+        12: 'finger2', 13: 'trinket1', 14: 'trinket2', 15: 'back',
+        16: 'mainhand', 17: 'offhand', 18: 'ranged'
+      };
+
+      const gear = {};
+      for (const [slotId, item] of Object.entries(equipment)) {
+        const gearSlot = SLOT_TO_GEAR[parseInt(slotId)];
+        if (gearSlot && item && item.itemId) {
+          gear[gearSlot] = item.itemId;
+        }
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/upgrades`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          profileKey,
+          level: level || 60,
+          gear,
+          minUpgradePercent: 5
+        })
+      });
+
+      if (!response.ok) {
+        this.tripBreaker(`${response.status} ${response.statusText}`);
+        return {};
+      }
+
+      const data = await response.json();
+
+      // Convert recommendations to flat upgrade map (itemId -> stat diffs)
+      const upgrades = {};
+      if (data.recommendations) {
+        for (const rec of data.recommendations) {
+          if (rec.items) {
+            for (const item of rec.items) {
+              if (item.itemId && item.upgradePercent) {
+                upgrades[item.itemId] = {
+                  overall: `+${item.upgradePercent.toFixed(1)}%`,
+                  note: `${rec.slot} upgrade from ${item.source || 'Unknown'}`
+                };
+              }
+            }
+          }
+        }
+      }
+
+      return upgrades;
+    } catch (error) {
+      this.tripBreaker(error.message);
+      return {};
     }
   }
 

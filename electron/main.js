@@ -19,7 +19,8 @@ const store = new Store({
     wowPath: null,
     autoStart: true,
     syncIntervalMinutes: 5,
-    firstRun: true
+    firstRun: true,
+    apiUrl: ''
   }
 });
 
@@ -135,8 +136,10 @@ function initializeApp() {
     return;
   }
 
-  // Initialize API client
-  api = new API(syncToken);
+  // Initialize API client (use custom URL if set, otherwise production)
+  const apiUrl = store.get('apiUrl') || '';
+  api = new API(syncToken, apiUrl || undefined);
+  console.log(`API target: ${api.baseUrl}`);
 
   // Initialize loot sync
   lootSync = new LootSync(api);
@@ -167,6 +170,22 @@ async function scanAndSyncCharacters(wowPath) {
     const scanner = new Scanner(wowPath);
     const characters = scanner.scanCharacters();
 
+    // Enrich characters with class from GearSync data if available
+    for (const char of characters) {
+      try {
+        if (fs.existsSync(char.gearSyncFile)) {
+          const data = Parser.parseSavedVariables(char.gearSyncFile);
+          if (data) {
+            if (data.class) char.class = data.class;
+            if (data.race) char.race = data.race;
+            if (data.level) char.level = data.level;
+          }
+        }
+      } catch (e) {
+        // Ignore parse errors for individual characters
+      }
+    }
+
     console.log(`Found ${characters.length} characters`);
 
     if (api && characters.length > 0) {
@@ -196,26 +215,36 @@ async function handleSavedVariablesUpdate(data) {
 
     if (!api) return;
 
-    // Update equipment on API (won't throw — circuit breaker handles failures)
-    await api.updateEquipment(data.character, data.realm, data.equipment);
+    // Update equipment + talents on API (won't throw — circuit breaker handles failures)
+    await api.updateEquipment(data.character, data.realm, data.equipment, data.talents || null, data.class || null, data.race || null, data.level || null);
 
-    // Get item IDs from equipment
-    const itemIds = Object.values(data.equipment)
-      .filter(item => item && item.itemId)
-      .map(item => item.itemId);
+    // Fetch upgrade recommendations from server
+    try {
+      const params = new URLSearchParams({ character: data.character });
+      if (data.realm) params.set('realm', data.realm);
 
-    if (itemIds.length > 0) {
-      const upgrades = await api.getUpgrades(itemIds, data.character);
+      const response = await fetch(`${api.baseUrl}/api/upgrades/recommendations?${params}`, {
+        method: 'GET',
+        headers: api.getHeaders()
+      });
 
-      if (Object.keys(upgrades).length > 0) {
-        const cache = new Cache();
-        cache.updateUpgrades(upgrades);
+      if (response.ok) {
+        const recData = await response.json();
+        const upgrades = recData.upgrades || {};
 
-        const Generator = require('../src/generator');
-        const wowPath = store.get('wowPath');
-        Generator.generateUpgradeData(cache.getAllUpgrades(), wowPath);
-        console.log('Upgrade data generated');
+        if (Object.keys(upgrades).length > 0) {
+          const cache = new Cache();
+          cache.clearCache();
+          cache.updateUpgrades(upgrades);
+
+          const Generator = require('../src/generator');
+          const wowPath = store.get('wowPath');
+          Generator.generateUpgradeData(upgrades, wowPath);
+          console.log(`Upgrade data generated: ${Object.keys(upgrades).length} recommendations for ${data.character}`);
+        }
       }
+    } catch (upgradeError) {
+      console.warn('Upgrade recommendations fetch failed:', upgradeError.message);
     }
 
     if (tray) {
@@ -359,7 +388,8 @@ ipcMain.handle('get-config', () => {
     syncToken: store.get('syncToken'),
     wowPath: store.get('wowPath'),
     autoStart: store.get('autoStart'),
-    syncIntervalMinutes: store.get('syncIntervalMinutes')
+    syncIntervalMinutes: store.get('syncIntervalMinutes'),
+    apiUrl: store.get('apiUrl') || ''
   };
 });
 
@@ -387,6 +417,7 @@ ipcMain.handle('save-config', async (event, config) => {
     store.set('wowPath', config.wowPath);
     store.set('autoStart', config.autoStart);
     store.set('syncIntervalMinutes', config.syncIntervalMinutes);
+    store.set('apiUrl', config.apiUrl || '');
     store.set('firstRun', false);
 
     // Update auto-launch (can fail on some systems, don't crash)
@@ -439,9 +470,10 @@ ipcMain.handle('open-external', (event, url) => {
 
 ipcMain.handle('test-token', async (event, token) => {
   try {
-    const testApi = new API(token);
+    const apiUrl = store.get('apiUrl') || '';
+    const testApi = new API(token, apiUrl || undefined);
     const valid = await testApi.validateToken();
-    return { valid, error: null };
+    return { valid, error: null, url: testApi.baseUrl };
   } catch (error) {
     return { valid: false, error: error.message };
   }

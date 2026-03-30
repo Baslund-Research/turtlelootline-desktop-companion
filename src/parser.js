@@ -47,18 +47,17 @@ class LuaParser {
 
     // Replace Lua table syntax with JSON syntax
     jsonString = jsonString
-      // Handle ["key"] = value -> "key": value
-      .replace(/\["([^"]+)"\]\s*=/g, '"$1":')
+      // Handle ["key"] = value -> "key": value (including empty string keys)
+      .replace(/\["([^"]*)"\]\s*=/g, '"$1":')
       // Handle [number] = value -> "number": value
       .replace(/\[(\d+)\]\s*=/g, '"$1":')
-      // Handle key = value -> "key": value (for simple keys)
-      .replace(/(\w+)\s*=/g, '"$1":')
+      // Handle key = value -> "key": value (for simple keys, but not inside strings)
+      .replace(/(?<!["\w])(\w+)\s*=/g, '"$1":')
       // Remove trailing commas before closing braces/brackets
       .replace(/,(\s*[}\]])/g, '$1')
       // Handle Lua nil -> null
-      .replace(/nil/g, 'null')
+      .replace(/\bnil\b/g, 'null')
       // Handle Lua true/false (already valid JSON)
-      // Wrap keys and values properly
       .trim();
 
     // For very simple tables, JSON.parse might work after these replacements
