@@ -405,8 +405,8 @@
                 </div>
             </div>
 
-            <!-- Game -->
-            <div class="section">
+            <!-- Developer (only visible in dev mode) -->
+            <div class="section" id="devSection" style="display: none;">
                 <div class="section-title">Developer</div>
 
                 <div class="form-row">
@@ -479,6 +479,10 @@
             document.getElementById('syncInterval').value = config.syncIntervalMinutes || 5;
             document.getElementById('autoStart').checked = config.autoStart !== false;
             document.getElementById('apiUrl').value = config.apiUrl || '';
+
+            if (config.isDev) {
+                document.getElementById('devSection').style.display = '';
+            }
 
             loadSyncStatus();
         })();

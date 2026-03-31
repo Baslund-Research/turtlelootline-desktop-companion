@@ -145,9 +145,13 @@ class TurtleLootLineTray {
     // Settings and actions
     menuTemplate.push(
       {
-        label: '⚙ Settings',
+        label: '🔧 Settings',
         click: this.callbacks.onOpenSettings
       },
+      ...(this.callbacks.onOpenDebugLog ? [{
+        label: '🪵 Debug Log',
+        click: this.callbacks.onOpenDebugLog
+      }] : []),
       {
         label: '📂 Open WoW Folder',
         click: this.callbacks.onOpenWowFolder

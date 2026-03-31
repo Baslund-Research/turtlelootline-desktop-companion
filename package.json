@@ -1,9 +1,11 @@
 {
   "name": "turtlelootline-companion",
   "version": "1.2.0",
+  "productName": "TurtleLootLine Companion",
   "description": "Desktop companion for TurtleLootLine - syncs WoW gear data",
   "main": "electron/main.js",
   "scripts": {
+    "postinstall": "node scripts/patch-electron-plist.js",
     "start": "electron .",
     "dev": "electron . --dev",
     "build": "electron-builder --win --mac",

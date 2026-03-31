@@ -49,7 +49,7 @@ class LootSync {
 
   /**
    * Sync loot data from an account-level SavedVariables file
-   * @param {string} filePath Path to account-level GearSync.lua
+   * @param {string} filePath Path to account-level GearScore.lua
    * @param {string} account Account name
    * @returns {Promise<Object>} Sync result
    */
@@ -143,7 +143,7 @@ class LootSync {
   /**
    * Format a loot DB item for the API
    * @param {number} itemId Item ID
-   * @param {Object} item Item data from GearSyncLootDB
+   * @param {Object} item Item data from GearScoreLootDB
    * @returns {Object} API-formatted item
    */
   formatItemForAPI(itemId, item) {

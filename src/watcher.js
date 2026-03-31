@@ -14,32 +14,26 @@ class SavedVariablesWatcher {
    * Start watching SavedVariables files
    */
   start() {
-    // Watch per-character GearSync.lua files
+    // Watch per-character GearScore.lua files (and legacy GearSync.lua)
     const charPattern = path.join(
-      this.wowPath,
-      'WTF',
-      'Account',
-      '*',
-      '*',
-      '*',
-      'SavedVariables',
-      'GearSync.lua'
+      this.wowPath, 'WTF', 'Account', '*', '*', '*', 'SavedVariables', 'GearScore.lua'
+    );
+    const charPatternLegacy = path.join(
+      this.wowPath, 'WTF', 'Account', '*', '*', '*', 'SavedVariables', 'GearSync.lua'
     );
 
-    // Watch account-level GearSync.lua files (where GearSyncLootDB lives)
+    // Watch account-level GearScore.lua files (where GearScoreLootDB lives)
     const accountPattern = path.join(
-      this.wowPath,
-      'WTF',
-      'Account',
-      '*',
-      'SavedVariables',
-      'GearSync.lua'
+      this.wowPath, 'WTF', 'Account', '*', 'SavedVariables', 'GearScore.lua'
+    );
+    const accountPatternLegacy = path.join(
+      this.wowPath, 'WTF', 'Account', '*', 'SavedVariables', 'GearSync.lua'
     );
 
     console.log(`Starting file watcher for character pattern: ${charPattern}`);
     console.log(`Starting file watcher for account pattern: ${accountPattern}`);
 
-    this.watcher = chokidar.watch([charPattern, accountPattern], {
+    this.watcher = chokidar.watch([charPattern, charPatternLegacy, accountPattern, accountPatternLegacy], {
       persistent: true,
       ignoreInitial: false,
       awaitWriteFinish: {
@@ -52,11 +46,11 @@ class SavedVariablesWatcher {
 
     this.watcher
       .on('add', (filePath) => {
-        console.log(`GearSync.lua detected: ${filePath}`);
+        console.log(`GearScore file detected: ${filePath}`);
         this.handleFileChange(filePath);
       })
       .on('change', (filePath) => {
-        console.log(`GearSync.lua changed: ${filePath}`);
+        console.log(`GearScore file changed: ${filePath}`);
         this.handleFileChange(filePath);
       })
       .on('error', (error) => {
@@ -81,21 +75,21 @@ class SavedVariablesWatcher {
 
   /**
    * Check if a file is an account-level SavedVariables (not per-character)
-   * Account-level: WTF/Account/<ACCOUNT>/SavedVariables/GearSync.lua
-   * Per-character:  WTF/Account/<ACCOUNT>/<REALM>/<CHAR>/SavedVariables/GearSync.lua
+   * Account-level: WTF/Account/<ACCOUNT>/SavedVariables/GearScore.lua
+   * Per-character:  WTF/Account/<ACCOUNT>/<REALM>/<CHAR>/SavedVariables/GearScore.lua
    * @param {string} filePath Path to check
    * @returns {boolean} True if account-level
    */
   isAccountLevel(filePath) {
     const normalized = filePath.replace(/\\/g, '/');
     // Account-level has exactly one folder between "Account" and "SavedVariables"
-    const match = normalized.match(/Account\/([^/]+)\/SavedVariables\/GearSync\.lua$/);
+    const match = normalized.match(/Account\/([^/]+)\/SavedVariables\/Gear(?:Score|Sync)\.lua$/);
     return !!match;
   }
 
   /**
    * Extract account name from file path
-   * @param {string} filePath Path to GearSync.lua
+   * @param {string} filePath Path to GearScore.lua
    * @returns {string|null} Account name
    */
   extractAccount(filePath) {
@@ -119,9 +113,13 @@ class SavedVariablesWatcher {
         }
       } else {
         // Per-character file — trigger equipment sync (existing behavior)
+        console.log(`Parsing per-character file: ${filePath}`);
         const data = Parser.parseSavedVariables(filePath);
         if (data && this.onUpdate) {
+          console.log(`Parsed equipment for ${data.character} (${data.realm}): ${Object.keys(data.equipment || {}).length} slots`);
           this.onUpdate(data);
+        } else {
+          console.warn(`Parser returned no data for: ${filePath}`);
         }
       }
     } catch (error) {

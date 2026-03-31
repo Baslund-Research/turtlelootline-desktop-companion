@@ -55,7 +55,9 @@ class WTFScanner {
               realm,
               name: charName,
               savedVariablesPath,
-              gearSyncFile: path.join(savedVariablesPath, 'GearSync.lua')
+              gearSyncFile: fs.existsSync(path.join(savedVariablesPath, 'GearScore.lua'))
+                ? path.join(savedVariablesPath, 'GearScore.lua')
+                : path.join(savedVariablesPath, 'GearSync.lua')
             });
           }
         }

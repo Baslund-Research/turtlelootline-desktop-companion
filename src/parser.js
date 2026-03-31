@@ -4,7 +4,7 @@ const path = require('path');
 class LuaParser {
   /**
    * Parse SavedVariables Lua file
-   * @param {string} filePath Path to GearSync.lua file
+   * @param {string} filePath Path to GearScore.lua file
    * @returns {Object|null} Parsed data or null
    */
   static parseSavedVariables(filePath) {
@@ -15,11 +15,12 @@ class LuaParser {
 
       const content = fs.readFileSync(filePath, 'utf8');
 
-      // Extract GearSyncData table
-      const match = content.match(/GearSyncData\s*=\s*(\{[\s\S]*?\n\})/);
+      // Extract GearScoreData table (legacy: GearSyncData)
+      const match = content.match(/GearScoreData\s*=\s*(\{[\s\S]*?\n\})/) ||
+                    content.match(/GearSyncData\s*=\s*(\{[\s\S]*?\n\})/);
 
       if (!match) {
-        console.warn(`No GearSyncData found in ${filePath}`);
+        console.warn(`No GearScoreData found in ${filePath}`);
         return null;
       }
 
@@ -161,8 +162,8 @@ class LuaParser {
   }
 
   /**
-   * Parse GearSyncLootDB from account-level SavedVariables file
-   * @param {string} filePath Path to account-level GearSync.lua
+   * Parse GearScoreLootDB from account-level SavedVariables file
+   * @param {string} filePath Path to account-level GearScore.lua
    * @returns {Object|null} Parsed loot DB or null
    */
   static parseLootDB(filePath) {
@@ -173,11 +174,12 @@ class LuaParser {
 
       const content = fs.readFileSync(filePath, 'utf8');
 
-      // Extract GearSyncLootDB table
-      const match = content.match(/GearSyncLootDB\s*=\s*(\{[\s\S]*?\n\})/);
+      // Extract GearScoreLootDB table (legacy: GearSyncLootDB)
+      const match = content.match(/GearScoreLootDB\s*=\s*(\{[\s\S]*?\n\})/) ||
+                    content.match(/GearSyncLootDB\s*=\s*(\{[\s\S]*?\n\})/);
 
       if (!match) {
-        console.log(`No GearSyncLootDB found in ${filePath}`);
+        console.log(`No GearScoreLootDB found in ${filePath}`);
         return null;
       }
 
@@ -192,7 +194,7 @@ class LuaParser {
   }
 
   /**
-   * Find account-level SavedVariables file containing GearSyncLootDB
+   * Find account-level SavedVariables file containing GearScoreLootDB
    * @param {string} wowPath Root WoW installation path
    * @returns {Array<{account: string, filePath: string}>} Account files found
    */
@@ -209,7 +211,11 @@ class LuaParser {
         if (!fs.statSync(accountPath).isDirectory()) continue;
         if (account === 'SavedVariables') continue;
 
-        const svFile = path.join(accountPath, 'SavedVariables', 'GearSync.lua');
+        // Check for GearScore.lua (current) or GearSync.lua (legacy)
+        let svFile = path.join(accountPath, 'SavedVariables', 'GearScore.lua');
+        if (!fs.existsSync(svFile)) {
+          svFile = path.join(accountPath, 'SavedVariables', 'GearSync.lua');
+        }
         if (fs.existsSync(svFile)) {
           results.push({ account, filePath: svFile });
         }

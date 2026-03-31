@@ -8,5 +8,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   detectWowPath: () => ipcRenderer.invoke('detect-wow-path'),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   testToken: (token) => ipcRenderer.invoke('test-token', token),
-  getSyncStatus: () => ipcRenderer.invoke('get-sync-status')
+  getSyncStatus: () => ipcRenderer.invoke('get-sync-status'),
+  getDebugLogs: () => ipcRenderer.invoke('get-debug-logs'),
+  clearDebugLogs: () => ipcRenderer.invoke('clear-debug-logs'),
+  onDebugLog: (callback) => {
+    ipcRenderer.on('debug-log', (event, entry) => callback(entry));
+  }
 });
