@@ -1,6 +1,6 @@
 {
   "name": "turtlelootline-companion",
-  "version": "1.2.5",
+  "version": "1.2.8",
   "productName": "TurtleLootLine Companion",
   "description": "Desktop companion for TurtleLootLine - syncs WoW gear data",
   "main": "electron/main.js",
@@ -11,9 +11,9 @@
     "build": "electron-builder --win --mac",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
-    "release": "npm version patch --no-git-tag-version && electron-builder --win --mac --publish always && node -e \"const p=require('./package.json'); const {execSync}=require('child_process'); execSync('git add -A && git commit -m \"release v'+p.version+'\" && git tag v'+p.version+' && git push && git push --tags', {stdio:'inherit'})\"",
-    "release:minor": "npm version minor --no-git-tag-version && electron-builder --win --mac --publish always && node -e \"const p=require('./package.json'); const {execSync}=require('child_process'); execSync('git add -A && git commit -m \"release v'+p.version+'\" && git tag v'+p.version+' && git push && git push --tags', {stdio:'inherit'})\"",
-    "release:major": "npm version major --no-git-tag-version && electron-builder --win --mac --publish always && node -e \"const p=require('./package.json'); const {execSync}=require('child_process'); execSync('git add -A && git commit -m \"release v'+p.version+'\" && git tag v'+p.version+' && git push && git push --tags', {stdio:'inherit'})\"",
+    "release": "npm version patch --no-git-tag-version && electron-builder --win --mac --publish always && node scripts/release-tag.js",
+    "release:minor": "npm version minor --no-git-tag-version && electron-builder --win --mac --publish always && node scripts/release-tag.js",
+    "release:major": "npm version major --no-git-tag-version && electron-builder --win --mac --publish always && node scripts/release-tag.js",
     "release:win": "npm version patch --no-git-tag-version && electron-builder --win --publish always",
     "release:mac": "npm version patch --no-git-tag-version && electron-builder --mac --publish always"
   },
@@ -67,7 +67,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.png"
