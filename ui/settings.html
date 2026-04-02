@@ -351,7 +351,8 @@
 </head>
 <body>
     <div class="titlebar">
-        <span class="version">v1.2.0</span>
+        <span class="version" id="app-version"></span>
+        <script>document.getElementById('app-version').textContent = 'v' + (window.electronAPI?.appVersion || '?')</script>
     </div>
 
     <div class="content">
