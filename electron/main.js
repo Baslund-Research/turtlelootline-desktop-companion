@@ -618,6 +618,8 @@ function showDebugWindow() {
 }
 
 // IPC handlers for setup/settings windows
+ipcMain.handle('get-app-version', () => app.getVersion());
+
 ipcMain.handle('get-config', () => {
   return {
     syncToken: store.get('syncToken'),

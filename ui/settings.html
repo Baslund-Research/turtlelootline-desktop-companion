@@ -352,7 +352,12 @@
 <body>
     <div class="titlebar">
         <span class="version" id="app-version"></span>
-        <script>document.getElementById('app-version').textContent = 'v' + (window.electronAPI?.appVersion || '?')</script>
+        <script>
+          (async () => {
+            const v = await window.electronAPI?.getAppVersion?.();
+            document.getElementById('app-version').textContent = 'v' + (v || '?');
+          })();
+        </script>
     </div>
 
     <div class="content">

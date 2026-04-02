@@ -1,8 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 // Expose safe APIs to renderer process
+let cachedVersion = null;
+try { cachedVersion = require('../package.json').version; } catch {}
+
 contextBridge.exposeInMainWorld('electronAPI', {
-  appVersion: require('../package.json').version,
+  getAppVersion: () => cachedVersion || ipcRenderer.invoke('get-app-version'),
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (config) => ipcRenderer.invoke('save-config', config),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
