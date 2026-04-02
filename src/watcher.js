@@ -117,6 +117,9 @@ class SavedVariablesWatcher {
         const data = Parser.parseSavedVariables(filePath);
         if (data && this.onUpdate) {
           console.log(`Parsed equipment for ${data.character} (${data.realm}): ${Object.keys(data.equipment || {}).length} slots`);
+          if (data.inventory) {
+            console.log(`  Inventory: ${(data.inventory.bags || []).length} bag items, ${(data.inventory.bank || []).length} bank items`);
+          }
           this.onUpdate(data);
         } else {
           console.warn(`Parser returned no data for: ${filePath}`);

@@ -28,6 +28,16 @@ class LuaParser {
       const luaTable = match[1];
       const parsed = this.luaTableToJson(luaTable);
 
+      // Also extract GearScoreInventory if present
+      const invMatch = content.match(/GearScoreInventory\s*=\s*(\{[\s\S]*?\n\})/);
+      if (invMatch) {
+        try {
+          parsed.inventory = this.luaTableToJson(invMatch[1]);
+        } catch (e) {
+          console.warn('Failed to parse GearScoreInventory:', e.message);
+        }
+      }
+
       return parsed;
     } catch (error) {
       console.error('Error parsing SavedVariables:', error);

@@ -284,6 +284,41 @@ class TurtleLootLineAPI {
   }
 
   /**
+   * Sync bag and bank inventory for a character
+   * @param {Object} data Character inventory data
+   * @returns {Promise<Object>} API response
+   */
+  async syncInventory({ character, realm, account, bags, bank, bankSyncedAt }) {
+    if (!this.isAvailable()) return { skipped: true };
+
+    try {
+      const payload = { character, realm, account };
+      if (bags && bags.length > 0) payload.bags = bags;
+      if (bank && bank.length > 0) {
+        payload.bank = bank;
+        payload.bankSyncedAt = bankSyncedAt || new Date().toISOString();
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/characters/inventory`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`Inventory sync failed (${response.status}): ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Inventory sync error:', error.message);
+      this.tripBreaker(error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Bulk sync collected item data to the API
    * @param {string} account Account name
    * @param {string} realm Realm name
@@ -312,6 +347,56 @@ class TurtleLootLineAPI {
       return await response.json();
     } catch (error) {
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get list of wanted item IDs from the server
+   * @returns {Promise<Object>} { itemIds: number[], count: number }
+   */
+  async getWantedItems() {
+    if (!this.isAvailable()) return { itemIds: [], count: 0 };
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/items/wanted`, {
+        method: 'GET',
+        headers: this.getHeaders()
+      });
+
+      if (!response.ok) {
+        this.tripBreaker(`${response.status} ${response.statusText}`);
+        return { itemIds: [], count: 0 };
+      }
+
+      return await response.json();
+    } catch (error) {
+      this.tripBreaker(error.message);
+      return { itemIds: [], count: 0 };
+    }
+  }
+
+  /**
+   * Get wanted items as ready-to-write Lua file content
+   * @returns {Promise<string|null>} Lua file content or null on failure
+   */
+  async getWantedLua() {
+    if (!this.isAvailable()) return null;
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/items/wanted-lua`, {
+        method: 'GET',
+        headers: this.getHeaders()
+      });
+
+      if (!response.ok) {
+        this.tripBreaker(`${response.status} ${response.statusText}`);
+        return null;
+      }
+
+      return await response.text();
+    } catch (error) {
+      this.tripBreaker(error.message);
+      return null;
     }
   }
 
