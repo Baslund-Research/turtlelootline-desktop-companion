@@ -135,8 +135,8 @@ app.whenReady().then(async () => {
     onQuit: () => app.quit()
   });
 
-  // Set up auto-launch if enabled
-  if (store.get('autoStart')) {
+  // Set up auto-launch if enabled (only in production — dev mode registers wrong path)
+  if (store.get('autoStart') && !isDev) {
     autoLauncher.enable();
   }
 
@@ -657,14 +657,17 @@ ipcMain.handle('save-config', async (event, config) => {
     store.set('firstRun', false);
 
     // Update auto-launch (can fail on some systems, don't crash)
-    try {
-      if (config.autoStart) {
-        await autoLauncher.enable();
-      } else {
-        await autoLauncher.disable();
+    // Only in production — dev mode registers the wrong exe path
+    if (!isDev) {
+      try {
+        if (config.autoStart) {
+          await autoLauncher.enable();
+        } else {
+          await autoLauncher.disable();
+        }
+      } catch (autoLaunchError) {
+        console.warn('Auto-launch setup failed:', autoLaunchError.message);
       }
-    } catch (autoLaunchError) {
-      console.warn('Auto-launch setup failed:', autoLaunchError.message);
     }
 
     // Initialize or reinitialize app
