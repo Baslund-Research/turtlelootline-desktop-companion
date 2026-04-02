@@ -140,9 +140,9 @@ app.whenReady().then(async () => {
     autoLauncher.enable();
   }
 
-  // Auto-updater — check for updates silently
+  // Auto-updater — download automatically, prompt user to install
   autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoInstallOnAppQuit = false; // We'll prompt the user instead
   autoUpdater.logger = {
     info: (msg) => console.log('[updater]', msg),
     warn: (msg) => console.warn('[updater]', msg),
@@ -150,14 +150,36 @@ app.whenReady().then(async () => {
   };
 
   autoUpdater.on('update-available', (info) => {
-    console.log(`[updater] Update available: v${info.version}`);
+    console.log(`[updater] Update available: v${info.version} — downloading...`);
+    addDebugLog('updater', `Update v${info.version} available, downloading...`);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.log(`[updater] Update downloaded: v${info.version} — will install on quit`);
-    if (tray) {
-      tray.tray.setToolTip(`TurtleLootLine Companion — Update v${info.version} ready, restart to install`);
-    }
+    console.log(`[updater] Update downloaded: v${info.version}`);
+    addDebugLog('updater', `Update v${info.version} downloaded`);
+
+    // Show dialog asking user to restart
+    const { dialog } = require('electron');
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Update Available',
+      message: `TurtleLootLine Companion v${info.version} is ready to install.`,
+      detail: 'The app will restart to apply the update.',
+      buttons: ['Update Now', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+    }).then(({ response }) => {
+      if (response === 0) {
+        // User clicked "Update Now" — quit and install
+        autoUpdater.quitAndInstall(false, true);
+      } else {
+        // User clicked "Later" — install on next quit
+        autoUpdater.autoInstallOnAppQuit = true;
+        if (tray) {
+          tray.tray.setToolTip(`TurtleLootLine Companion — Update v${info.version} ready, restart to install`);
+        }
+      }
+    });
   });
 
   autoUpdater.on('error', (err) => {
