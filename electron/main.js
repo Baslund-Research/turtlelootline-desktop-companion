@@ -41,7 +41,7 @@ let tray = null;
 let setupWindow = null;
 let settingsWindow = null;
 let debugWindow = null;
-let watcher = null;
+let watchers = [];
 let api = null;
 let lootSync = null;
 
@@ -202,17 +202,22 @@ app.on('window-all-closed', (e) => {
 });
 
 app.on('before-quit', () => {
-  if (watcher) {
-    watcher.stop();
-  }
+  stopAllWatchers();
 });
 
 // Initialize the main app after setup
+function getWowPaths() {
+  const paths = [store.get('wowPath')].filter(Boolean);
+  const path2 = store.get('wowPath2');
+  if (path2) paths.push(path2);
+  return paths;
+}
+
 function initializeApp() {
   const syncToken = store.get('syncToken');
-  const wowPath = store.get('wowPath');
+  const wowPaths = getWowPaths();
 
-  if (!syncToken || !wowPath) {
+  if (!syncToken || wowPaths.length === 0) {
     console.error('Missing configuration. Please run setup.');
     showSetupWindow();
     return;
@@ -227,27 +232,42 @@ function initializeApp() {
   // Initialize loot sync
   lootSync = new LootSync(api);
 
-  // Scan for characters initially
-  scanAndSyncCharacters(wowPath);
+  // Scan for characters across all installations
+  scanAllInstallations();
 
-  // Start watching SavedVariables (per-character + account-level)
-  watcher = new Watcher(wowPath, handleSavedVariablesUpdate, handleLootDBUpdate);
-  watcher.start();
-  addDebugLog('info', 'File watcher started');
+  // Start watching SavedVariables for each installation
+  stopAllWatchers();
+  for (const wowPath of wowPaths) {
+    const w = new Watcher(wowPath, handleSavedVariablesUpdate, handleLootDBUpdate);
+    w.start();
+    watchers.push(w);
+    addDebugLog('info', `File watcher started for: ${wowPath}`);
+  }
 
   // Set up periodic sync
   const syncInterval = store.get('syncIntervalMinutes') * 60 * 1000;
-  setInterval(() => {
-    scanAndSyncCharacters(wowPath);
-    // syncWantedItems(wowPath); // Disabled — using TurtleCraft DB instead
-  }, syncInterval);
-
-  // Sync wanted items on startup — disabled
-  // syncWantedItems(wowPath);
+  setInterval(() => scanAllInstallations(), syncInterval);
 
   if (tray) {
     tray.setStatus('connected');
   }
+}
+
+function stopAllWatchers() {
+  for (const w of watchers) {
+    try { w.stop(); } catch (e) {}
+  }
+  watchers = [];
+}
+
+async function scanAllInstallations() {
+  const wowPaths = getWowPaths();
+  const allCharacters = [];
+  for (const wowPath of wowPaths) {
+    const chars = await scanAndSyncCharacters(wowPath);
+    if (chars) allCharacters.push(...chars);
+  }
+  return allCharacters;
 }
 
 // Scan characters and sync to API
@@ -303,7 +323,14 @@ async function scanAndSyncCharacters(wowPath) {
 
     if (api && characters.length > 0) {
       try {
-        await api.syncCharacters(characters);
+        const syncResult = await api.syncCharacters(characters);
+        // Attach API IDs to characters for tray links
+        if (syncResult && syncResult.characters) {
+          for (const synced of syncResult.characters) {
+            const match = characters.find(c => c.name === synced.name && c.realm === synced.realm);
+            if (match) match.syncedId = synced.id;
+          }
+        }
         console.log('Characters synced to API');
         addDebugLog('sync', `Characters synced to API (${characters.length} characters)`);
       } catch (syncError) {
@@ -317,10 +344,13 @@ async function scanAndSyncCharacters(wowPath) {
       tray.updateCharacters(characters);
       tray.setStatus('connected');
     }
+
+    return characters;
   } catch (error) {
     console.warn('Error scanning characters:', error.message);
     addDebugLog('error', `Error scanning characters: ${error.message}`);
     if (tray) tray.setStatus('connected');
+    return [];
   }
 }
 
@@ -495,16 +525,13 @@ async function syncWantedItems(wowPath) {
 
 // Manual sync triggered from tray
 function handleSyncNow() {
-  const wowPath = store.get('wowPath');
-  if (wowPath) {
+  const wowPaths = getWowPaths();
+  if (wowPaths.length > 0) {
     addDebugLog('info', 'Manual sync triggered');
     // Reset circuit breaker so manual sync always tries the API
     if (api) api.resetBreaker();
 
-    scanAndSyncCharacters(wowPath);
-
-    // Sync wanted items — disabled
-    // syncWantedItems(wowPath);
+    scanAllInstallations();
 
     // Also sync loot data
     if (lootSync) {
@@ -536,10 +563,10 @@ function showSetupWindow() {
   }
 
   setupWindow = new BrowserWindow({
-    width: 650,
-    height: 680,
-    minWidth: 500,
-    minHeight: 500,
+    width: 520,
+    height: 620,
+    minWidth: 480,
+    minHeight: 580,
     resizable: true,
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../assets/icon.png'),
@@ -574,9 +601,9 @@ function showSettingsWindow() {
   }
 
   settingsWindow = new BrowserWindow({
-    width: 650,
-    height: 680,
-    minWidth: 500,
+    width: 700,
+    height: 560,
+    minWidth: 600,
     minHeight: 500,
     resizable: true,
     autoHideMenuBar: true,
@@ -649,6 +676,7 @@ ipcMain.handle('get-config', () => {
   return {
     syncToken: store.get('syncToken'),
     wowPath: store.get('wowPath'),
+    wowPath2: store.get('wowPath2') || '',
     autoStart: store.get('autoStart'),
     syncIntervalMinutes: store.get('syncIntervalMinutes'),
     apiUrl: store.get('apiUrl') || '',
@@ -678,6 +706,7 @@ ipcMain.handle('save-config', async (event, config) => {
     // Save config regardless
     store.set('syncToken', config.syncToken);
     store.set('wowPath', config.wowPath);
+    store.set('wowPath2', config.wowPath2 || '');
     store.set('autoStart', config.autoStart);
     store.set('syncIntervalMinutes', config.syncIntervalMinutes);
     store.set('apiUrl', config.apiUrl || '');
@@ -698,10 +727,13 @@ ipcMain.handle('save-config', async (event, config) => {
     }
 
     // Initialize or reinitialize app
-    if (watcher) {
-      watcher.stop();
-    }
+    stopAllWatchers();
     initializeApp();
+
+    // Close setup window if open
+    if (setupWindow) {
+      setupWindow.close();
+    }
 
     return { success: true, warning: validationWarning };
   } catch (error) {
@@ -755,21 +787,21 @@ ipcMain.handle('clear-debug-logs', () => {
 });
 
 ipcMain.handle('get-sync-status', () => {
-  const wowPath = store.get('wowPath');
+  const wowPaths = getWowPaths();
   const status = {
     apiAvailable: api ? api.isAvailable() : false,
     characters: 0,
     lootItems: 0,
     lootSynced: 0,
     lastSync: null,
-    watcherActive: !!watcher,
+    watcherActive: watchers.length > 0,
   };
 
-  // Count characters
-  if (wowPath) {
+  // Count characters across all installations
+  for (const wowPath of wowPaths) {
     try {
       const scanner = new Scanner(wowPath);
-      status.characters = scanner.scanCharacters().length;
+      status.characters += scanner.scanCharacters().length;
     } catch (e) {}
   }
 
@@ -780,8 +812,8 @@ ipcMain.handle('get-sync-status', () => {
     status.lastSync = lootStats.lastSync;
   }
 
-  // Count loot DB items from file
-  if (wowPath) {
+  // Count loot DB items across all installations
+  for (const wowPath of wowPaths) {
     try {
       const accountFiles = Parser.findAccountSavedVariables(wowPath);
       for (const { filePath } of accountFiles) {
@@ -794,4 +826,24 @@ ipcMain.handle('get-sync-status', () => {
   }
 
   return status;
+});
+
+ipcMain.handle('sync-now', async () => {
+  await scanAllInstallations();
+});
+
+ipcMain.handle('open-wow-folder', () => {
+  openWowFolder();
+});
+
+ipcMain.handle('open-debug-log', () => {
+  showDebugWindow();
+});
+
+ipcMain.handle('check-for-updates', () => {
+  autoUpdater.checkForUpdates().catch(() => {});
+});
+
+ipcMain.handle('quit-app', () => {
+  app.quit();
 });
