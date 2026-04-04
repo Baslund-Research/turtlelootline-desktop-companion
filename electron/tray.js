@@ -70,9 +70,13 @@ class TurtleLootLineTray {
     });
 
     ipcMain.handle('tray-action', (event, action) => {
+      if (action === 'sync') {
+        // Don't close — let the tray show sync feedback
+        this.callbacks.onSyncNow();
+        return;
+      }
       this.hideTrayWindow();
       switch (action) {
-        case 'sync': this.callbacks.onSyncNow(); break;
         case 'settings': this.callbacks.onOpenSettings(); break;
         case 'wow-folder': this.callbacks.onOpenWowFolder(); break;
         case 'debug-log': if (this.callbacks.onOpenDebugLog) this.callbacks.onOpenDebugLog(); break;

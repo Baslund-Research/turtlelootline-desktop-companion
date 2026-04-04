@@ -59,9 +59,12 @@
       padding: 8px 12px; border-radius: 8px; cursor: pointer;
     }
     .sync-row:hover { background: var(--bg-hover); }
-    .sync-row .icon { font-size: 16px; color: var(--primary); }
+    .sync-row .icon { font-size: 16px; color: var(--primary); transition: transform 0.3s; }
+    .sync-row.syncing .icon { animation: spin 0.8s linear infinite; }
+    .sync-row.done .icon { color: var(--success); }
     .sync-row .label { font-size: 13px; color: var(--text-primary); flex: 1; }
     .sync-row .hint { font-size: 11px; color: var(--text-dim); }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .last-sync {
       padding: 8px 12px; font-size: 12px; color: var(--text-dim);
     }
@@ -166,9 +169,9 @@
 
     <!-- Sync -->
     <div class="sync-sec">
-      <div class="sync-row" onclick="action('sync')">
-        <span class="icon">&#x21BB;</span>
-        <span class="label">Sync Now</span>
+      <div class="sync-row" id="syncRow" onclick="doSync()">
+        <span class="icon" id="syncIcon">&#x21BB;</span>
+        <span class="label" id="syncLabel">Sync Now</span>
         <span class="hint">Ctrl+S</span>
       </div>
       <div class="last-sync" id="lastSync">Last sync: Just now</div>
@@ -257,6 +260,32 @@
 
     function action(name) {
       window.electronAPI.trayAction(name);
+    }
+
+    async function doSync() {
+      const row = document.getElementById('syncRow');
+      const icon = document.getElementById('syncIcon');
+      const label = document.getElementById('syncLabel');
+      if (row.classList.contains('syncing')) return;
+
+      row.classList.add('syncing');
+      label.textContent = 'Syncing...';
+      action('sync');
+
+      // Wait a bit then show done state
+      setTimeout(() => {
+        row.classList.remove('syncing');
+        row.classList.add('done');
+        icon.innerHTML = '&#x2713;';
+        label.textContent = 'Synced!';
+        document.getElementById('lastSync').textContent = 'Last sync: Just now';
+
+        setTimeout(() => {
+          row.classList.remove('done');
+          icon.innerHTML = '&#x21BB;';
+          label.textContent = 'Sync Now';
+        }, 1500);
+      }, 2000);
     }
 
     function toggleView(show) {

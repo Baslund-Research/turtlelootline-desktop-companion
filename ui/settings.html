@@ -412,7 +412,7 @@
           <div class="links-row">
             <a href="#" onclick="openLink('https://turtlelootline.com')">🌐 Website</a>
             <a href="#" onclick="openLink('https://github.com/Baslund-Research/turtlelootline-desktop-companion')">📦 GitHub</a>
-            <a href="#" onclick="openLink('https://discord.gg/turtlelootline')">💬 Discord</a>
+            <a href="#" onclick="openLink('https://discord.gg/fQ9TAtDZ')">💬 Discord</a>
           </div>
         </div>
       </div>
@@ -555,6 +555,10 @@
     }
 
     async function saveSettings() {
+      const btn = document.querySelector('.settings-footer .btn-primary');
+      const origText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
       try {
         await window.electronAPI.saveConfig({
           syncToken: $('syncToken').value.trim(),
@@ -563,9 +567,21 @@
           autoStart: $('autoStart').checked,
           syncIntervalMinutes: parseInt($('syncInterval').value) || 5,
         });
-        window.close();
+        btn.textContent = '✓ Saved';
+        btn.style.background = 'var(--success)';
+        setTimeout(() => {
+          btn.textContent = origText;
+          btn.style.background = '';
+          btn.disabled = false;
+        }, 1500);
       } catch (err) {
-        console.error('Save failed:', err);
+        btn.textContent = 'Save failed';
+        btn.style.background = 'var(--error)';
+        setTimeout(() => {
+          btn.textContent = origText;
+          btn.style.background = '';
+          btn.disabled = false;
+        }, 2000);
       }
     }
 
