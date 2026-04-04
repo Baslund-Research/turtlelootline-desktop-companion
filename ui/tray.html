@@ -134,7 +134,11 @@
     .action-row.quit { color: var(--error); }
 
     /* Expanded character list (Tray B) */
-    .char-expanded { display: flex; flex-direction: column; gap: 4px; }
+    .char-expanded { display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto; }
+    .char-expanded::-webkit-scrollbar { width: 4px; }
+    .char-expanded::-webkit-scrollbar-track { background: transparent; }
+    .char-expanded::-webkit-scrollbar-thumb { background: #45475a; border-radius: 2px; }
+    .char-expanded::-webkit-scrollbar-thumb:hover { background: #585b70; }
     .realm-group { display: flex; flex-direction: column; gap: 2px; }
     .realm-header {
       display: flex; align-items: center; gap: 6px; padding: 6px 4px;
