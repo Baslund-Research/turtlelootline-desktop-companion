@@ -16,6 +16,9 @@ const API = require('../src/api');
 const Cache = require('../src/cache');
 const LootSync = require('../src/loot-sync');
 
+// Dev mode detection
+const isDev = !app.isPackaged || process.argv.includes('--dev');
+
 // Initialize electron-store for config
 const store = new Store({
   defaults: {
