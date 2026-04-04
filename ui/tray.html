@@ -144,7 +144,11 @@
       display: flex; align-items: center; gap: 6px; padding: 6px 4px;
       font-size: 13px; color: var(--text-primary); cursor: pointer;
     }
-    .realm-header .arrow { font-size: 10px; color: var(--text-dim); }
+    .realm-header:hover { opacity: 0.8; }
+    .realm-header .arrow { font-size: 10px; color: var(--text-dim); transition: transform 0.2s; }
+    .realm-header.collapsed .arrow { transform: rotate(-90deg); }
+    .realm-chars { overflow: hidden; }
+    .realm-chars.collapsed { display: none; }
     .realm-header .count { font-size: 12px; color: var(--text-dim); font-weight: normal; }
     .char-row {
       display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 20px;
@@ -316,11 +320,18 @@
       for (const [realm, realmChars] of Object.entries(byRealm)) {
         const group = document.createElement('div');
         group.className = 'realm-group';
-        group.innerHTML = `<div class="realm-header">
+
+        const header = document.createElement('div');
+        header.className = 'realm-header collapsed';
+        header.innerHTML = `
           <span class="arrow">&#x25BE;</span>
           <span>${realm}</span>
           <span class="count">(${realmChars.length})</span>
-        </div>`;
+        `;
+
+        const charContainer = document.createElement('div');
+        charContainer.className = 'realm-chars collapsed';
+
         for (const c of realmChars) {
           const colors = getAvatarColor(c, 0);
           const row = document.createElement('div');
@@ -330,8 +341,17 @@
             <span class="char-name">${c.name}</span>
             <span class="char-class">${c.class || ''}</span>
           `;
-          group.appendChild(row);
+          charContainer.appendChild(row);
         }
+
+        header.addEventListener('click', () => {
+          header.classList.toggle('collapsed');
+          charContainer.classList.toggle('collapsed');
+          setTimeout(resizeWindow, 50);
+        });
+
+        group.appendChild(header);
+        group.appendChild(charContainer);
         list.appendChild(group);
       }
     }
