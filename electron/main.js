@@ -536,10 +536,10 @@ function showSetupWindow() {
   }
 
   setupWindow = new BrowserWindow({
-    width: 650,
-    height: 680,
-    minWidth: 500,
-    minHeight: 500,
+    width: 520,
+    height: 620,
+    minWidth: 480,
+    minHeight: 580,
     resizable: true,
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../assets/icon.png'),
@@ -574,9 +574,9 @@ function showSettingsWindow() {
   }
 
   settingsWindow = new BrowserWindow({
-    width: 650,
-    height: 680,
-    minWidth: 500,
+    width: 700,
+    height: 560,
+    minWidth: 600,
     minHeight: 500,
     resizable: true,
     autoHideMenuBar: true,
