@@ -152,7 +152,9 @@
     .realm-header .count { font-size: 12px; color: var(--text-dim); font-weight: normal; }
     .char-row {
       display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 20px;
+      cursor: pointer; border-radius: 6px;
     }
+    .char-row:hover { background: var(--bg-hover); }
     .char-row .char-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
     .char-row .char-name { font-size: 13px; color: var(--text-primary); flex: 1; }
     .char-row .char-class { font-size: 12px; color: var(--text-dim); }
@@ -336,11 +338,17 @@
           const colors = getAvatarColor(c, 0);
           const row = document.createElement('div');
           row.className = 'char-row';
+          if (c.syncedId) row.title = 'Open in browser';
           row.innerHTML = `
             <span class="char-dot" style="background: ${colors[0]}"></span>
             <span class="char-name">${c.name}</span>
             <span class="char-class">${c.class || ''}</span>
           `;
+          if (c.syncedId) {
+            row.addEventListener('click', () => {
+              window.electronAPI.trayAction({ type: 'open-character', id: c.syncedId });
+            });
+          }
           charContainer.appendChild(row);
         }
 
@@ -412,12 +420,18 @@
           const dotColors = getAvatarColor(c, i);
           const row = document.createElement('div');
           row.className = 'recent-row';
+          if (c.syncedId) { row.style.cursor = 'pointer'; row.title = 'Open in browser'; }
           row.innerHTML = `
             <span class="recent-dot" style="background: ${dotColors[0]}"></span>
             <span class="recent-name">${c.name}</span>
             <span class="recent-info">${c.class || ''}</span>
             <span class="recent-spacer"></span>
           `;
+          if (c.syncedId) {
+            row.addEventListener('click', () => {
+              window.electronAPI.trayAction({ type: 'open-character', id: c.syncedId });
+            });
+          }
           recentRows.appendChild(row);
         });
       } else {

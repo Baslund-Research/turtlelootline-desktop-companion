@@ -58,7 +58,8 @@ class TurtleLootLineTray {
         name: c.name,
         realm: c.realm,
         class: c.class || null,
-        level: c.level || null
+        level: c.level || null,
+        syncedId: c.syncedId || null
       }))
     }));
 
@@ -73,6 +74,14 @@ class TurtleLootLineTray {
       if (action === 'sync') {
         // Don't close — let the tray show sync feedback
         this.callbacks.onSyncNow();
+        return;
+      }
+      if (typeof action === 'object' && action.type === 'open-character') {
+        this.hideTrayWindow();
+        const { shell } = require('electron');
+        const apiUrl = this.store.get('apiUrl') || 'https://turtlelootline.com';
+        const baseUrl = apiUrl || 'https://turtlelootline.com';
+        shell.openExternal(`${baseUrl}/?synced=${action.id}`);
         return;
       }
       this.hideTrayWindow();
@@ -160,7 +169,8 @@ class TurtleLootLineTray {
         name: c.name,
         realm: c.realm,
         class: c.class || null,
-        level: c.level || null
+        level: c.level || null,
+        syncedId: c.syncedId || null
       }))
     });
   }

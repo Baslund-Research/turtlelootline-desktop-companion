@@ -323,7 +323,14 @@ async function scanAndSyncCharacters(wowPath) {
 
     if (api && characters.length > 0) {
       try {
-        await api.syncCharacters(characters);
+        const syncResult = await api.syncCharacters(characters);
+        // Attach API IDs to characters for tray links
+        if (syncResult && syncResult.characters) {
+          for (const synced of syncResult.characters) {
+            const match = characters.find(c => c.name === synced.name && c.realm === synced.realm);
+            if (match) match.syncedId = synced.id;
+          }
+        }
         console.log('Characters synced to API');
         addDebugLog('sync', `Characters synced to API (${characters.length} characters)`);
       } catch (syncError) {
