@@ -703,6 +703,11 @@ ipcMain.handle('save-config', async (event, config) => {
     }
     initializeApp();
 
+    // Close setup window if open
+    if (setupWindow) {
+      setupWindow.close();
+    }
+
     return { success: true, warning: validationWarning };
   } catch (error) {
     return { success: false, error: error.message };
