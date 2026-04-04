@@ -1,620 +1,602 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TurtleLootLine Settings</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TurtleLootLine Settings</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { overflow: hidden; }
 
-        body {
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #1e1e2e;
-            color: #cdd6f4;
-            font-size: 13px;
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+    .settings-layout {
+      display: flex;
+      height: 100vh;
+    }
 
-        .titlebar {
-            background: #181825;
-            padding: 6px 20px;
-            border-bottom: 1px solid #313244;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            -webkit-app-region: drag;
-            flex-shrink: 0;
-        }
+    /* Content area */
+    .content {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
 
-        .titlebar .version {
-            font-size: 11px;
-            color: #6c7086;
-            -webkit-app-region: no-drag;
-        }
+    .content-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
 
-        .content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-        }
+    /* Tab panels */
+    .tab-panel { display: none; flex-direction: column; gap: 20px; }
+    .tab-panel.active { display: flex; }
 
-        .content::-webkit-scrollbar {
-            width: 6px;
-        }
+    /* Status page */
+    .status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-        .content::-webkit-scrollbar-track {
-            background: transparent;
-        }
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .quick-action-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: var(--font-sans);
+    }
+    .quick-action-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
-        .content::-webkit-scrollbar-thumb {
-            background: #45475a;
-            border-radius: 3px;
-        }
+    /* Connection page */
+    .token-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: var(--font-size-sm);
+    }
+    .token-status.valid { color: var(--success); }
+    .token-status.invalid { color: var(--error); }
+    .token-status.testing { color: var(--text-dim); }
 
-        .content::-webkit-scrollbar-thumb:hover {
-            background: #585b70;
-        }
+    .api-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .api-label { font-size: var(--font-size-xs); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+    .api-value { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; margin-top: 2px; }
 
-        /* Sections */
-        .section { margin-bottom: 20px; }
+    /* Install cards */
+    .install-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .install-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .install-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+    }
+    .install-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .install-dot.active { background: var(--success); }
+    .install-dot.secondary { background: var(--primary); }
 
-        .section-title {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: #6c7086;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid #313244;
-        }
+    /* Footer */
+    .settings-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-primary);
+      flex-shrink: 0;
+    }
 
-        /* Form rows */
-        .form-row { margin-bottom: 14px; }
-
-        .form-row label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: #bac2de;
-            margin-bottom: 5px;
-        }
-
-        .form-row .hint {
-            font-size: 11px;
-            color: #585b70;
-            margin-top: 3px;
-        }
-
-        .form-row .hint a {
-            color: #89b4fa;
-            text-decoration: none;
-        }
-
-        /* Inputs */
-        input[type="text"],
-        input[type="number"] {
-            width: 100%;
-            padding: 8px 10px;
-            background: #313244;
-            border: 1px solid #45475a;
-            border-radius: 4px;
-            color: #cdd6f4;
-            font-size: 13px;
-            font-family: 'Cascadia Code', 'Consolas', monospace;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        input[type="text"]:focus,
-        input[type="number"]:focus {
-            border-color: #89b4fa;
-        }
-
-        input[type="number"] { width: 80px; }
-
-        .path-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        .path-row input { flex: 1; }
-
-        .token-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        .token-row input { flex: 1; }
-
-        /* Buttons */
-        .btn {
-            padding: 7px 14px;
-            border: 1px solid #45475a;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-            font-family: inherit;
-            white-space: nowrap;
-        }
-
-        .btn-ghost {
-            background: transparent;
-            color: #bac2de;
-            border-color: #45475a;
-        }
-
-        .btn-ghost:hover {
-            background: #313244;
-            border-color: #585b70;
-        }
-
-        .btn-primary {
-            background: #89b4fa;
-            color: #1e1e2e;
-            border-color: #89b4fa;
-        }
-
-        .btn-primary:hover {
-            background: #74c7ec;
-            border-color: #74c7ec;
-        }
-
-        .btn-primary:disabled {
-            background: #45475a;
-            border-color: #45475a;
-            color: #6c7086;
-            cursor: not-allowed;
-        }
-
-        .btn-test {
-            background: transparent;
-            color: #89b4fa;
-            border-color: #89b4fa;
-        }
-
-        .btn-test:hover {
-            background: rgba(137, 180, 250, 0.1);
-        }
-
-        .btn-test:disabled {
-            color: #6c7086;
-            border-color: #45475a;
-            cursor: not-allowed;
-        }
-
-        /* Token status indicator */
-        .token-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 11px;
-            margin-top: 4px;
-        }
-
-        .token-status .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .token-status.valid .dot { background: #a6e3a1; }
-        .token-status.valid { color: #a6e3a1; }
-
-        .token-status.invalid .dot { background: #f38ba8; }
-        .token-status.invalid { color: #f38ba8; }
-
-        .token-status.testing .dot { background: #89b4fa; animation: pulse 1s infinite; }
-        .token-status.testing { color: #89b4fa; }
-
-        .token-status.unknown .dot { background: #6c7086; }
-        .token-status.unknown { color: #6c7086; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        /* Toggle switch */
-        .toggle-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 0;
-        }
-
-        .toggle-row .toggle-label { font-size: 13px; color: #bac2de; }
-        .toggle-row .toggle-hint { font-size: 11px; color: #585b70; }
-
-        .switch {
-            position: relative;
-            width: 36px;
-            height: 20px;
-            flex-shrink: 0;
-        }
-
-        .switch input { opacity: 0; width: 0; height: 0; }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: #45475a;
-            border-radius: 20px;
-            transition: 0.2s;
-        }
-
-        .slider:before {
-            content: "";
-            position: absolute;
-            height: 14px; width: 14px;
-            left: 3px; bottom: 3px;
-            background: #cdd6f4;
-            border-radius: 50%;
-            transition: 0.2s;
-        }
-
-        .switch input:checked + .slider { background: #a6e3a1; }
-        .switch input:checked + .slider:before { transform: translateX(16px); background: #1e1e2e; }
-
-        /* Sync status panel */
-        .status-panel {
-            background: #181825;
-            border: 1px solid #313244;
-            border-radius: 6px;
-            padding: 14px;
-        }
-
-        .status-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .status-item {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .status-item .status-label {
-            font-size: 11px;
-            color: #6c7086;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .status-item .status-value {
-            font-size: 16px;
-            font-weight: 700;
-            color: #cdd6f4;
-        }
-
-        .status-item .status-value.green { color: #a6e3a1; }
-        .status-item .status-value.red { color: #f38ba8; }
-        .status-item .status-value.blue { color: #89b4fa; }
-        .status-item .status-value.dim { color: #585b70; font-size: 12px; font-weight: 400; }
-
-        .status-divider {
-            grid-column: 1 / -1;
-            height: 1px;
-            background: #313244;
-        }
-
-        /* Footer bar */
-        .footer {
-            background: #181825;
-            border-top: 1px solid #313244;
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-
-        .footer-actions { display: flex; gap: 8px; }
-
-        /* Status toast */
-        .status-toast {
-            font-size: 12px;
-            padding: 5px 10px;
-            border-radius: 4px;
-            display: none;
-        }
-
-        .status-toast.error {
-            display: inline-block;
-            background: rgba(243, 139, 168, 0.15);
-            color: #f38ba8;
-            border: 1px solid rgba(243, 139, 168, 0.3);
-        }
-
-        .status-toast.success {
-            display: inline-block;
-            background: rgba(166, 227, 161, 0.15);
-            color: #a6e3a1;
-            border: 1px solid rgba(166, 227, 161, 0.3);
-        }
-
-        .status-toast.info {
-            display: inline-block;
-            background: rgba(137, 180, 250, 0.15);
-            color: #89b4fa;
-            border: 1px solid rgba(137, 180, 250, 0.3);
-        }
-    </style>
+    /* Links row */
+    .links-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .links-row a {
+      font-size: var(--font-size-sm);
+      color: var(--primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .links-row a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
-    <div class="titlebar">
-        <span class="version" id="app-version"></span>
-        <script>
-          (async () => {
-            const v = await window.electronAPI?.getAppVersion?.();
-            document.getElementById('app-version').textContent = 'v' + (v || '?');
-          })();
-        </script>
+  <div class="settings-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-icon">🐢</div>
+        <div class="sidebar-brand-name">TurtleLootLine</div>
+        <div class="sidebar-brand-version" id="appVersion">v...</div>
+      </div>
+
+      <div class="sidebar-nav">
+        <button class="sidebar-nav-item active" data-tab="status" onclick="switchTab('status')">
+          <span class="nav-icon">📊</span> Status
+        </button>
+        <button class="sidebar-nav-item" data-tab="connection" onclick="switchTab('connection')">
+          <span class="nav-icon">🔗</span> Connection
+        </button>
+        <button class="sidebar-nav-item" data-tab="game" onclick="switchTab('game')">
+          <span class="nav-icon">🎮</span> Game
+        </button>
+        <button class="sidebar-nav-item" data-tab="general" onclick="switchTab('general')">
+          <span class="nav-icon">⚙️</span> General
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="sidebar-nav-item btn-danger" onclick="quitApp()" style="justify-content: flex-start;">
+          <span class="nav-icon">✕</span> Quit App
+        </button>
+      </div>
     </div>
 
-    <div class="content">
-        <!-- Sync Status -->
-        <div class="section">
-            <div class="section-title">Sync Status</div>
-            <div class="status-panel">
-                <div class="status-grid">
-                    <div class="status-item">
-                        <span class="status-label">API</span>
-                        <span class="status-value" id="statusApi">--</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Characters</span>
-                        <span class="status-value" id="statusChars">--</span>
-                    </div>
-                    <div class="status-divider"></div>
-                    <div class="status-item">
-                        <span class="status-label">Loot Items</span>
-                        <span class="status-value" id="statusLoot">--</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Synced to API</span>
-                        <span class="status-value" id="statusSynced">--</span>
-                    </div>
-                    <div class="status-divider"></div>
-                    <div class="status-item" style="grid-column: 1 / -1;">
-                        <span class="status-label">Last Sync</span>
-                        <span class="status-value dim" id="statusLastSync">--</span>
-                    </div>
-                </div>
-            </div>
+    <!-- Content -->
+    <div style="flex: 1; display: flex; flex-direction: column;">
+      <!-- ========== STATUS TAB ========== -->
+      <div class="content tab-panel active" id="tab-status">
+        <div class="status-header">
+          <h1 class="content-title">Sync Status</h1>
+          <div class="flex items-center gap-sm">
+            <span class="badge badge-success" id="connectionBadge">● Connected</span>
+            <button class="btn btn-outline btn-sm" id="syncNowBtn" onclick="syncNow()">↻ Sync Now</button>
+          </div>
         </div>
 
-        <form id="settingsForm">
-            <!-- Connection -->
-            <div class="section">
-                <div class="section-title">Connection</div>
-
-                <div class="form-row">
-                    <label for="syncToken">Sync Token</label>
-                    <div class="token-row">
-                        <input type="text" id="syncToken" placeholder="ttl_abc123..." required>
-                        <button type="button" class="btn btn-test" id="testTokenBtn">Test</button>
-                    </div>
-                    <div class="token-status unknown" id="tokenStatus">
-                        <span class="dot"></span>
-                        <span id="tokenStatusText">Not tested</span>
-                    </div>
-                    <div class="hint">From your <a href="#" onclick="window.electronAPI.openExternal('https://turtlelootline.com'); return false;">turtlelootline.com</a> account</div>
-                </div>
-            </div>
-
-            <!-- Developer (only visible in dev mode) -->
-            <div class="section" id="devSection" style="display: none;">
-                <div class="section-title">Developer</div>
-
-                <div class="form-row">
-                    <label for="apiUrl">API URL Override</label>
-                    <input type="text" id="apiUrl" placeholder="Leave empty for production" style="font-size: 12px;">
-                    <div class="hint">Set to <code style="color: #89b4fa; background: #313244; padding: 1px 4px; border-radius: 2px;">http://localhost:3000</code> for local development</div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">Game</div>
-
-                <div class="form-row">
-                    <label for="wowPath">WoW Installation Path</label>
-                    <div class="path-row">
-                        <input type="text" id="wowPath" placeholder="C:\Games\Turtle WoW" required>
-                        <button type="button" class="btn btn-ghost" id="browsePath">Browse</button>
-                    </div>
-                    <div class="hint">Folder containing WTF and Interface</div>
-                </div>
-
-                <div class="form-row">
-                    <label for="syncInterval">Sync Interval</label>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="number" id="syncInterval" min="1" max="60" value="5" required>
-                        <span style="color: #6c7086; font-size: 12px;">minutes</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- General -->
-            <div class="section">
-                <div class="section-title">General</div>
-
-                <div class="toggle-row">
-                    <div>
-                        <div class="toggle-label">Start with system</div>
-                        <div class="toggle-hint">Launch companion when Windows starts</div>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="autoStart" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <div class="footer">
-        <span id="statusMessage" class="status-toast"></span>
-        <div class="footer-actions">
-            <button type="button" class="btn btn-ghost" id="cancelButton">Cancel</button>
-            <button type="submit" class="btn btn-primary" id="saveButton" form="settingsForm">Save Changes</button>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-label">Characters</div>
+            <div class="stat-value" id="statChars">—</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Items Synced</div>
+            <div class="stat-value" id="statItems">—</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Loot Items</div>
+            <div class="stat-value" id="statLoot">—</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Last Sync</div>
+            <div class="stat-value" id="statLastSync">—</div>
+          </div>
         </div>
+
+        <div>
+          <div class="section-title">Quick Actions</div>
+          <div class="quick-actions">
+            <button class="quick-action-btn" onclick="openWowFolder()">📂 Open WoW Folder</button>
+            <button class="quick-action-btn" onclick="openDebugLog()">⟩_ View Debug Log</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== CONNECTION TAB ========== -->
+      <div class="content tab-panel" id="tab-connection">
+        <h1 class="content-title">Connection</h1>
+
+        <div class="card">
+          <div class="section-title">🔑 Sync Token</div>
+          <p style="font-size: var(--font-size-sm); color: var(--text-dim); margin-bottom: 12px;">
+            Your authentication token connects this app to your TurtleLootLine account securely.
+          </p>
+          <div class="input-group">
+            <input type="text" id="syncToken" class="input input-mono" placeholder="ttl_a1b2c3d4e5f6g7h8i9j0...">
+            <button class="btn btn-primary btn-sm" id="testTokenBtn" onclick="testToken()">↻ Test</button>
+          </div>
+          <div class="token-status" id="tokenStatus">
+            <span class="status-dot status-dot-success"></span> Token verified — connected to API
+          </div>
+          <div style="margin-top: 8px;">
+            <a href="#" id="getTokenLink" style="font-size: var(--font-size-sm); color: var(--primary); text-decoration: none;">🔗 Get your token from turtlelootline.com/account</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">📡 API Status</div>
+          <div class="api-grid">
+            <div>
+              <div class="api-label">Endpoint</div>
+              <div class="api-value" id="apiEndpoint">—</div>
+            </div>
+            <div>
+              <div class="api-label">Status</div>
+              <div class="api-value" id="apiStatus">● <span style="color: var(--success);">Operational</span></div>
+            </div>
+            <div>
+              <div class="api-label">Latency</div>
+              <div class="api-value" id="apiLatency">—</div>
+            </div>
+            <div>
+              <div class="api-label">Protocol</div>
+              <div class="api-value" id="apiProtocol">🔒 HTTPS / TLS 1.3</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== GAME TAB ========== -->
+      <div class="content tab-panel" id="tab-game">
+        <h1 class="content-title">Game Settings</h1>
+
+        <div class="card">
+          <div class="section-title" style="display: flex; align-items: center; gap: 8px; border: none; padding: 0; margin-bottom: 16px;">
+            <span style="color: var(--primary);">&#x1F4C2;</span>
+            <span style="color: var(--text-primary); font-size: 14px; font-weight: 600; text-transform: none; letter-spacing: 0;">WoW Installations</span>
+          </div>
+
+          <!-- Primary Installation -->
+          <div class="install-card">
+            <div class="install-header">
+              <div class="install-label"><span class="install-dot active"></span> Primary Installation</div>
+              <span class="badge badge-success" style="font-size: 10px; padding: 2px 8px;">Active</span>
+            </div>
+            <div class="input-group">
+              <input type="text" id="wowPath" class="input input-mono input-sm" placeholder="Select your WoW folder..." readonly>
+              <button class="btn btn-outline btn-sm" onclick="browsePath()" style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
+                <span style="font-size: 12px;">&#x1F50D;</span> Browse
+              </button>
+            </div>
+          </div>
+
+          <!-- Second Installation (hidden by default) -->
+          <div id="secondInstall" style="display: none;">
+            <div class="install-card">
+              <div class="install-header">
+                <div class="install-label"><span class="install-dot secondary"></span> Second Installation</div>
+                <button onclick="removeSecondInstall()" style="background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px;" title="Remove">
+                  <span style="font-size: 14px;">&#x1F5D1;</span>
+                </button>
+              </div>
+              <div class="input-group">
+                <input type="text" id="wowPath2" class="input input-mono input-sm" placeholder="Select your WoW folder..." readonly>
+                <button class="btn btn-outline btn-sm" onclick="browsePath2()" style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
+                  <span style="font-size: 12px;">&#x1F50D;</span> Browse
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Auto-detect -->
+          <div class="install-card" onclick="autoDetect()" style="cursor: pointer; display: flex; align-items: center; gap: 12px; background: var(--success-glow, rgba(166,227,161,0.05)); border-color: rgba(166,227,161,0.08);">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(166,227,161,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <span style="color: var(--success); font-size: 18px;">&#x1F50E;</span>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: var(--font-size-sm); font-weight: 600; color: var(--success);">Auto-detect Installation</div>
+              <div style="font-size: var(--font-size-xs); color: var(--text-dim);" id="autoDetectResult">We'll scan common install locations for you</div>
+            </div>
+            <span style="color: var(--text-dim); font-size: 14px;">&#x276F;</span>
+          </div>
+
+          <!-- Add another installation -->
+          <button id="addInstallRow" class="btn btn-ghost btn-sm" onclick="addSecondInstall()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--text-dim); margin-top: 0;">
+            <span>+</span> Add another installation
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="section-title" style="display: flex; align-items: center; gap: 8px; border: none; padding: 0; margin-bottom: 16px;">
+            <span style="color: var(--primary);">&#x23F0;</span>
+            <span style="color: var(--text-primary); font-size: 14px; font-weight: 600; text-transform: none; letter-spacing: 0;">Sync Settings</span>
+          </div>
+
+          <div class="form-row" style="border-bottom: 1px solid var(--border-primary); padding-bottom: 12px;">
+            <div>
+              <div class="form-row-label">Sync Interval</div>
+              <div class="form-row-desc">How often to check for new loot data</div>
+            </div>
+            <div class="flex items-center gap-sm">
+              <input type="number" id="syncInterval" class="input input-number" min="1" max="60" value="5">
+              <span style="font-size: 12px; color: var(--text-dim);">min</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <div class="form-row-label">Real-time File Watcher</div>
+              <div class="form-row-desc">Detect changes instantly when WoW writes data</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="fileWatcher" checked>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== GENERAL TAB ========== -->
+      <div class="content tab-panel" id="tab-general">
+        <h1 class="content-title">General</h1>
+
+        <div class="card">
+          <div class="section-title">⚡ Startup & Behavior</div>
+
+          <div class="form-row" style="border-bottom: 1px solid var(--border-primary); padding-bottom: 12px;">
+            <div>
+              <div class="form-row-label">Launch at startup</div>
+              <div class="form-row-desc">Start TurtleLootLine when your computer boots</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="autoStart">
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+
+          <div class="form-row" style="border-bottom: 1px solid var(--border-primary); padding-bottom: 12px;">
+            <div>
+              <div class="form-row-label">Minimize to tray on close</div>
+              <div class="form-row-desc">Keep running in the background when you close the window</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="minimizeToTray" checked>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <div class="form-row-label">Show sync notifications</div>
+              <div class="form-row-desc">Display a notification after each successful sync</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="showNotifications">
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">ⓘ About & Updates</div>
+
+          <div class="form-row" style="border-bottom: 1px solid var(--border-primary); padding-bottom: 12px;">
+            <div>
+              <div class="form-row-label">Current Version</div>
+              <div class="form-row-desc" id="versionInfo">v... (latest)</div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="checkUpdates()">↻ Check for Updates</button>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <div class="form-row-label">Auto-update</div>
+              <div class="form-row-desc">Automatically download and install updates</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="autoUpdate" checked>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+
+          <div class="links-row">
+            <a href="#" onclick="openLink('https://turtlelootline.com')">🌐 Website</a>
+            <a href="#" onclick="openLink('https://github.com/Baslund-Research/turtlelootline-desktop-companion')">📦 GitHub</a>
+            <a href="#" onclick="openLink('https://discord.gg/turtlelootline')">💬 Discord</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="settings-footer">
+        <button class="btn btn-ghost btn-sm" onclick="cancel()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveSettings()">Save Changes</button>
+      </div>
     </div>
+  </div>
 
-    <script>
-        const form = document.getElementById('settingsForm');
-        const statusMessage = document.getElementById('statusMessage');
-        const saveButton = document.getElementById('saveButton');
-        const testTokenBtn = document.getElementById('testTokenBtn');
-        const tokenStatus = document.getElementById('tokenStatus');
-        const tokenStatusText = document.getElementById('tokenStatusText');
+  <script>
+    const $ = id => document.getElementById(id);
 
-        // Load config
-        (async () => {
-            const config = await window.electronAPI.getConfig();
-            document.getElementById('syncToken').value = config.syncToken || '';
-            document.getElementById('wowPath').value = config.wowPath || '';
-            document.getElementById('syncInterval').value = config.syncIntervalMinutes || 5;
-            document.getElementById('autoStart').checked = config.autoStart !== false;
-            document.getElementById('apiUrl').value = config.apiUrl || '';
+    // Tab switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
+      $('tab-' + tabId).classList.add('active');
+      document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+    }
 
-            if (config.isDev) {
-                document.getElementById('devSection').style.display = '';
-            }
+    // Load config
+    async function loadConfig() {
+      try {
+        const config = await window.electronAPI.getConfig();
+        $('syncToken').value = config.syncToken || '';
+        $('wowPath').value = config.wowPath || '';
+        $('syncInterval').value = config.syncIntervalMinutes || 5;
+        $('autoStart').checked = config.autoStart !== false;
 
-            loadSyncStatus();
-        })();
-
-        // Load sync status
-        async function loadSyncStatus() {
-            try {
-                const s = await window.electronAPI.getSyncStatus();
-
-                const apiEl = document.getElementById('statusApi');
-                if (s.apiAvailable) {
-                    apiEl.textContent = 'Connected';
-                    apiEl.className = 'status-value green';
-                } else {
-                    apiEl.textContent = 'Unavailable';
-                    apiEl.className = 'status-value red';
-                }
-
-                document.getElementById('statusChars').textContent = s.characters;
-                document.getElementById('statusLoot').textContent = s.lootItems;
-                document.getElementById('statusSynced').textContent = s.lootSynced;
-
-                const lastSyncEl = document.getElementById('statusLastSync');
-                if (s.lastSync) {
-                    const d = new Date(s.lastSync);
-                    const now = new Date();
-                    const diffMs = now - d;
-                    const diffMins = Math.floor(diffMs / 60000);
-
-                    if (diffMins < 1) lastSyncEl.textContent = 'Just now';
-                    else if (diffMins < 60) lastSyncEl.textContent = diffMins + ' min ago';
-                    else if (diffMins < 1440) lastSyncEl.textContent = Math.floor(diffMins / 60) + ' hours ago';
-                    else lastSyncEl.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
-                } else {
-                    lastSyncEl.textContent = 'Never';
-                }
-            } catch (e) {
-                console.warn('Failed to load sync status', e);
-            }
+        // Second WoW path
+        if (config.wowPath2) {
+          $('wowPath2').value = config.wowPath2;
+          addSecondInstall();
         }
 
-        // Test token
-        testTokenBtn.addEventListener('click', async () => {
-            const token = document.getElementById('syncToken').value.trim();
-            if (!token) {
-                tokenStatus.className = 'token-status invalid';
-                tokenStatusText.textContent = 'Enter a token first';
-                return;
-            }
+        // API endpoint display
+        const apiUrl = config.apiUrl || 'https://turtlelootline.com';
+        $('apiEndpoint').textContent = apiUrl.replace('https://', '').replace('http://', '');
+      } catch {}
 
-            testTokenBtn.disabled = true;
-            testTokenBtn.textContent = '...';
-            tokenStatus.className = 'token-status testing';
-            tokenStatusText.textContent = 'Testing...';
+      // Version
+      try {
+        const version = await window.electronAPI.getAppVersion();
+        $('appVersion').textContent = 'v' + (version || '?');
+        $('versionInfo').textContent = 'v' + (version || '?') + ' (latest)';
+      } catch {}
 
-            try {
-                const result = await window.electronAPI.testToken(token);
+      // Sync status
+      loadSyncStatus();
+    }
 
-                if (result.valid) {
-                    tokenStatus.className = 'token-status valid';
-                    tokenStatusText.textContent = 'Valid';
-                } else {
-                    tokenStatus.className = 'token-status invalid';
-                    tokenStatusText.textContent = result.error ? 'Failed: ' + result.error : 'Invalid token';
-                }
-            } catch (e) {
-                tokenStatus.className = 'token-status invalid';
-                tokenStatusText.textContent = 'Connection error';
-            }
+    async function loadSyncStatus() {
+      try {
+        const status = await window.electronAPI.getSyncStatus();
+        if (status) {
+          $('statChars').textContent = status.characters || '0';
+          $('statItems').textContent = (status.lootSynced || 0).toLocaleString();
+          $('statLoot').textContent = (status.lootItems || 0).toLocaleString();
 
-            testTokenBtn.disabled = false;
-            testTokenBtn.textContent = 'Test';
+          if (status.lastSync) {
+            const ago = Date.now() - new Date(status.lastSync).getTime();
+            const mins = Math.floor(ago / 60000);
+            $('statLastSync').textContent = mins < 1 ? 'Just now' : mins < 60 ? `${mins}m ago` : `${Math.floor(mins / 60)}h ago`;
+          } else {
+            $('statLastSync').textContent = 'Never';
+          }
+
+          if (status.apiAvailable) {
+            $('connectionBadge').className = 'badge badge-success';
+            $('connectionBadge').textContent = '● Connected';
+          } else {
+            $('connectionBadge').className = 'badge badge-error';
+            $('connectionBadge').textContent = '● Disconnected';
+          }
+        }
+      } catch {}
+    }
+
+    // Actions
+    async function testToken() {
+      const token = $('syncToken').value.trim();
+      if (!token) return;
+      $('tokenStatus').className = 'token-status testing';
+      $('tokenStatus').innerHTML = '↻ Testing...';
+      try {
+        const result = await window.electronAPI.testToken(token);
+        if (result.valid) {
+          $('tokenStatus').className = 'token-status valid';
+          $('tokenStatus').innerHTML = '<span class="status-dot status-dot-success"></span> Token verified — connected to API';
+        } else {
+          $('tokenStatus').className = 'token-status invalid';
+          $('tokenStatus').innerHTML = '<span class="status-dot status-dot-error"></span> ' + (result.error || 'Invalid token');
+        }
+      } catch (err) {
+        $('tokenStatus').className = 'token-status invalid';
+        $('tokenStatus').innerHTML = '<span class="status-dot status-dot-error"></span> Test failed';
+      }
+    }
+
+    async function browsePath() {
+      const path = await window.electronAPI.selectFolder();
+      if (path) $('wowPath').value = path;
+    }
+
+    async function browsePath2() {
+      const path = await window.electronAPI.selectFolder();
+      if (path) $('wowPath2').value = path;
+    }
+
+    function addSecondInstall() {
+      $('secondInstall').style.display = '';
+      $('addInstallRow').style.display = 'none';
+    }
+
+    function removeSecondInstall() {
+      $('wowPath2').value = '';
+      $('secondInstall').style.display = 'none';
+      $('addInstallRow').style.display = '';
+    }
+
+    async function autoDetect() {
+      $('autoDetectResult').textContent = 'Scanning...';
+      try {
+        const detected = await window.electronAPI.detectWowPath();
+        if (detected) {
+          $('wowPath').value = detected;
+          $('autoDetectResult').textContent = 'Found: ' + detected;
+          $('autoDetectResult').style.color = 'var(--success)';
+        } else {
+          $('autoDetectResult').textContent = 'No WoW installation found.';
+          $('autoDetectResult').style.color = 'var(--error)';
+        }
+      } catch {
+        $('autoDetectResult').textContent = 'Detection failed.';
+        $('autoDetectResult').style.color = 'var(--error)';
+      }
+    }
+
+    async function saveSettings() {
+      try {
+        await window.electronAPI.saveConfig({
+          syncToken: $('syncToken').value.trim(),
+          wowPath: $('wowPath').value,
+          wowPath2: $('wowPath2').value || '',
+          autoStart: $('autoStart').checked,
+          syncIntervalMinutes: parseInt($('syncInterval').value) || 5,
         });
+        window.close();
+      } catch (err) {
+        console.error('Save failed:', err);
+      }
+    }
 
-        document.getElementById('browsePath').addEventListener('click', async () => {
-            const selectedPath = await window.electronAPI.selectFolder();
-            if (selectedPath) document.getElementById('wowPath').value = selectedPath;
-        });
+    function cancel() { window.close(); }
+    async function syncNow() {
+      $('syncNowBtn').disabled = true;
+      $('syncNowBtn').textContent = '↻ Syncing...';
+      try {
+        await window.electronAPI.syncNow();
+        setTimeout(loadSyncStatus, 1000);
+      } catch {} finally {
+        $('syncNowBtn').disabled = false;
+        $('syncNowBtn').textContent = '↻ Sync Now';
+      }
+    }
+    function openWowFolder() { window.electronAPI.openWowFolder(); }
+    function openDebugLog() { window.electronAPI.openDebugLog(); }
+    function checkUpdates() { window.electronAPI.checkForUpdates(); }
+    function quitApp() { window.electronAPI.quitApp(); }
 
-        document.getElementById('cancelButton').addEventListener('click', () => window.close());
+    function openLink(url) {
+      window.electronAPI.openExternal(url);
+    }
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+    $('getTokenLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.electronAPI.openExternal('https://turtlelootline.com/settings#sync-token');
+    });
 
-            const config = {
-                syncToken: document.getElementById('syncToken').value.trim(),
-                wowPath: document.getElementById('wowPath').value.trim(),
-                autoStart: document.getElementById('autoStart').checked,
-                syncIntervalMinutes: parseInt(document.getElementById('syncInterval').value),
-                apiUrl: document.getElementById('apiUrl').value.trim()
-            };
-
-            if (!config.syncToken || !config.wowPath) {
-                statusMessage.className = 'status-toast error';
-                statusMessage.textContent = 'Fill in all required fields';
-                return;
-            }
-
-            if (config.syncIntervalMinutes < 1 || config.syncIntervalMinutes > 60) {
-                statusMessage.className = 'status-toast error';
-                statusMessage.textContent = 'Interval must be 1-60 minutes';
-                return;
-            }
-
-            saveButton.disabled = true;
-            saveButton.textContent = 'Saving...';
-            statusMessage.className = 'status-toast info';
-            statusMessage.textContent = 'Saving...';
-
-            try {
-                const result = await window.electronAPI.saveConfig(config);
-
-                if (result.success) {
-                    statusMessage.className = 'status-toast success';
-                    statusMessage.textContent = result.warning ? result.warning : 'Saved';
-                    setTimeout(() => { window.close(); }, 1500);
-                } else {
-                    throw new Error(result.error || 'Save failed');
-                }
-            } catch (error) {
-                statusMessage.className = 'status-toast error';
-                statusMessage.textContent = error.message;
-                saveButton.disabled = false;
-                saveButton.textContent = 'Save Changes';
-            }
-        });
-    </script>
+    // Init
+    loadConfig();
+  </script>
 </body>
 </html>

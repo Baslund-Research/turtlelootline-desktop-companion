@@ -649,6 +649,7 @@ ipcMain.handle('get-config', () => {
   return {
     syncToken: store.get('syncToken'),
     wowPath: store.get('wowPath'),
+    wowPath2: store.get('wowPath2') || '',
     autoStart: store.get('autoStart'),
     syncIntervalMinutes: store.get('syncIntervalMinutes'),
     apiUrl: store.get('apiUrl') || '',
@@ -678,6 +679,7 @@ ipcMain.handle('save-config', async (event, config) => {
     // Save config regardless
     store.set('syncToken', config.syncToken);
     store.set('wowPath', config.wowPath);
+    store.set('wowPath2', config.wowPath2 || '');
     store.set('autoStart', config.autoStart);
     store.set('syncIntervalMinutes', config.syncIntervalMinutes);
     store.set('apiUrl', config.apiUrl || '');
@@ -799,4 +801,27 @@ ipcMain.handle('get-sync-status', () => {
   }
 
   return status;
+});
+
+ipcMain.handle('sync-now', async () => {
+  const wowPath = store.get('wowPath');
+  if (wowPath) {
+    await scanAndSyncCharacters(wowPath);
+  }
+});
+
+ipcMain.handle('open-wow-folder', () => {
+  openWowFolder();
+});
+
+ipcMain.handle('open-debug-log', () => {
+  showDebugWindow();
+});
+
+ipcMain.handle('check-for-updates', () => {
+  autoUpdater.checkForUpdates().catch(() => {});
+});
+
+ipcMain.handle('quit-app', () => {
+  app.quit();
 });

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TurtleLootLine Tray</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 4px 4px 6px 4px;
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+      -webkit-app-region: no-drag;
+    }
+
+    .tray-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: 16px;
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+
+    .sep { height: 1px; background: var(--border-subtle, #2a2a3a); margin: 0; flex-shrink: 0; }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+    }
+    .header-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: radial-gradient(circle, #a6e3a1, #74c7a0);
+      flex-shrink: 0;
+    }
+    .header-dot.error { background: radial-gradient(circle, #f38ba8, #d87a94); }
+    .header-dot.syncing { background: radial-gradient(circle, #89b4fa, #74a0ec); }
+    .header-dot.disconnected { background: var(--text-dim); }
+    .header-title {
+      font-size: 14px; font-weight: 600; color: var(--text-primary); flex: 1;
+    }
+    .header-status {
+      font-size: 11px; color: var(--success);
+    }
+    .header-status.error { color: var(--error); }
+    .header-status.syncing { color: var(--primary); }
+    .header-status.disconnected { color: var(--text-dim); }
+
+    /* Sync section */
+    .sync-sec { padding: 4px 8px; }
+    .sync-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    }
+    .sync-row:hover { background: var(--bg-hover); }
+    .sync-row .icon { font-size: 16px; color: var(--primary); }
+    .sync-row .label { font-size: 13px; color: var(--text-primary); flex: 1; }
+    .sync-row .hint { font-size: 11px; color: var(--text-dim); }
+    .last-sync {
+      padding: 8px 12px; font-size: 12px; color: var(--text-dim);
+    }
+
+    /* Characters section */
+    .char-sec { padding: 8px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .char-header {
+      display: flex; align-items: center; gap: 6px; padding: 0 4px;
+    }
+    .char-header .icon { font-size: 14px; color: var(--text-dim); }
+    .char-header .label {
+      font-size: 10px; color: var(--text-dim); letter-spacing: 1.5px; flex: 1;
+    }
+    .char-badge {
+      font-size: 10px; color: var(--text-secondary);
+      background: var(--bg-hover); border-radius: 10px; padding: 2px 8px;
+    }
+
+    /* Avatar row */
+    .avatar-row { display: flex; gap: 6px; padding: 4px; }
+    .avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #1e1e2e;
+    }
+    .avatar.more {
+      background: var(--bg-hover); color: var(--text-secondary);
+      font-size: 10px; font-weight: 600;
+      border: 1px solid var(--border-hover);
+    }
+
+    /* Recent activity */
+    .recent {
+      background: var(--bg-hover); border-radius: 8px; padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .recent-title {
+      font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px;
+    }
+    .recent-row {
+      display: flex; align-items: center; gap: 8px; font-size: 12px;
+    }
+    .recent-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .recent-name { font-weight: 500; color: var(--text-primary); }
+    .recent-info { color: var(--text-dim); }
+    .recent-info.active { color: var(--success); }
+    .recent-spacer { flex: 1; }
+    .recent-time { font-size: 10px; color: var(--text-dim); }
+
+    /* View all */
+    .view-all {
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 4px; font-size: 11px; color: var(--primary); cursor: pointer;
+    }
+    .view-all:hover { text-decoration: underline; }
+
+    /* Action rows */
+    .action-sec { padding: 4px 8px; display: flex; flex-direction: column; gap: 2px; }
+    .action-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-radius: 8px; cursor: pointer;
+      font-size: 13px; color: var(--text-primary);
+    }
+    .action-row:hover { background: var(--bg-hover); }
+    .action-row .icon { font-size: 16px; color: var(--text-secondary); }
+    .action-row.quit .icon { color: var(--error); }
+    .action-row.quit { color: var(--error); }
+
+    /* Expanded character list (Tray B) */
+    .char-expanded { display: flex; flex-direction: column; gap: 4px; }
+    .realm-group { display: flex; flex-direction: column; gap: 2px; }
+    .realm-header {
+      display: flex; align-items: center; gap: 6px; padding: 6px 4px;
+      font-size: 13px; color: var(--text-primary); cursor: pointer;
+    }
+    .realm-header .arrow { font-size: 10px; color: var(--text-dim); }
+    .realm-header .count { font-size: 12px; color: var(--text-dim); font-weight: normal; }
+    .char-row {
+      display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 20px;
+    }
+    .char-row .char-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .char-row .char-name { font-size: 13px; color: var(--text-primary); flex: 1; }
+    .char-row .char-class { font-size: 12px; color: var(--text-dim); }
+
+    /* Back to compact link */
+    .view-toggle {
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 4px; font-size: 11px; color: var(--primary); cursor: pointer;
+    }
+    .view-toggle:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="tray-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-dot" id="headerDot"></div>
+      <div class="header-title">TurtleLootLine</div>
+      <div class="header-status" id="headerStatus">Connected</div>
+    </div>
+    <div class="sep"></div>
+
+    <!-- Sync -->
+    <div class="sync-sec">
+      <div class="sync-row" onclick="action('sync')">
+        <span class="icon">&#x21BB;</span>
+        <span class="label">Sync Now</span>
+        <span class="hint">Ctrl+S</span>
+      </div>
+      <div class="last-sync" id="lastSync">Last sync: Just now</div>
+    </div>
+    <div class="sep"></div>
+
+    <!-- Characters: Compact View (Tray A) -->
+    <div class="char-sec" id="charCompact">
+      <div class="char-header">
+        <span class="icon">&#x1F465;</span>
+        <span class="label">CHARACTERS</span>
+        <span class="char-badge" id="charBadge">0 synced</span>
+      </div>
+      <div class="avatar-row" id="avatarRow"></div>
+      <div class="recent" id="recentActivity" style="display: none;">
+        <div class="recent-title">Recent Activity</div>
+        <div id="recentRows"></div>
+      </div>
+      <div class="view-toggle" onclick="toggleView(true)">
+        View all characters &rarr;
+      </div>
+    </div>
+
+    <!-- Characters: Expanded View (Tray B) -->
+    <div class="char-sec" id="charExpanded" style="display: none;">
+      <div class="char-header">
+        <span class="label">CHARACTERS</span>
+        <span class="char-badge" id="charBadgeExpanded">0 total</span>
+      </div>
+      <div class="char-expanded" id="charList"></div>
+      <div class="view-toggle" onclick="toggleView(false)">
+        &larr; Compact view
+      </div>
+    </div>
+    <div class="sep"></div>
+
+    <!-- Actions -->
+    <div class="action-sec">
+      <div class="action-row" onclick="action('settings')">
+        <span class="icon">&#x2699;&#xFE0F;</span>
+        <span>Settings</span>
+      </div>
+      <div class="action-row" onclick="action('wow-folder')">
+        <span class="icon">&#x1F4C2;</span>
+        <span>Open WoW Folder</span>
+      </div>
+    </div>
+    <div class="sep"></div>
+
+    <!-- Quit -->
+    <div class="action-sec">
+      <div class="action-row quit" onclick="action('quit')">
+        <span class="icon">&#x2715;</span>
+        <span>Quit TurtleLootLine</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CLASS_COLORS = {
+      'Warrior': ['#a6e3a1', '#74c7a0'],
+      'Paladin': ['#f9e2af', '#e0c890'],
+      'Hunter': ['#a6e3a1', '#74c7a0'],
+      'Rogue': ['#f9e2af', '#e0c890'],
+      'Priest': ['#cdd6f4', '#b0b8d8'],
+      'Shaman': ['#89b4fa', '#74a0ec'],
+      'Mage': ['#89b4fa', '#74a0ec'],
+      'Warlock': ['#cba6f7', '#b48fe0'],
+      'Druid': ['#fab387', '#e09a72'],
+    };
+
+    function getAvatarColor(char, index) {
+      if (char.class && CLASS_COLORS[char.class]) {
+        return CLASS_COLORS[char.class];
+      }
+      const fallback = [
+        ['#a6e3a1', '#74c7a0'], ['#89b4fa', '#74a0ec'],
+        ['#fab387', '#e09a72'], ['#cba6f7', '#b48fe0'],
+        ['#f38ba8', '#d87a94'], ['#f9e2af', '#e0c890']
+      ];
+      return fallback[index % fallback.length];
+    }
+
+    let expanded = false;
+    let currentState = null;
+
+    function action(name) {
+      window.electronAPI.trayAction(name);
+    }
+
+    function toggleView(show) {
+      expanded = show;
+      document.getElementById('charCompact').style.display = show ? 'none' : '';
+      document.getElementById('charExpanded').style.display = show ? '' : 'none';
+      if (show && currentState) renderExpanded(currentState.characters || []);
+      setTimeout(resizeWindow, 50);
+    }
+
+    function renderExpanded(chars) {
+      document.getElementById('charBadgeExpanded').textContent = chars.length + ' total';
+      const list = document.getElementById('charList');
+      list.innerHTML = '';
+
+      // Group by realm
+      const byRealm = {};
+      for (const c of chars) {
+        const realm = c.realm || 'Unknown';
+        if (!byRealm[realm]) byRealm[realm] = [];
+        byRealm[realm].push(c);
+      }
+
+      for (const [realm, realmChars] of Object.entries(byRealm)) {
+        const group = document.createElement('div');
+        group.className = 'realm-group';
+        group.innerHTML = `<div class="realm-header">
+          <span class="arrow">&#x25BE;</span>
+          <span>${realm}</span>
+          <span class="count">(${realmChars.length})</span>
+        </div>`;
+        for (const c of realmChars) {
+          const colors = getAvatarColor(c, 0);
+          const row = document.createElement('div');
+          row.className = 'char-row';
+          row.innerHTML = `
+            <span class="char-dot" style="background: ${colors[0]}"></span>
+            <span class="char-name">${c.name}</span>
+            <span class="char-class">${c.class || ''}</span>
+          `;
+          group.appendChild(row);
+        }
+        list.appendChild(group);
+      }
+    }
+
+    function getLastSyncText(ts) {
+      if (!ts) return 'Never synced';
+      const diff = Date.now() - ts;
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return `${mins} min ago`;
+      return `${Math.floor(mins / 60)} hour${Math.floor(mins / 60) > 1 ? 's' : ''} ago`;
+    }
+
+    function render(state) {
+      currentState = state;
+      // Header dot & status
+      const dot = document.getElementById('headerDot');
+      const statusEl = document.getElementById('headerStatus');
+      dot.className = 'header-dot ' + (state.status || 'disconnected');
+      const labels = { connected: 'Connected', syncing: 'Syncing...', error: 'Error', disconnected: 'Disconnected' };
+      statusEl.textContent = labels[state.status] || 'Disconnected';
+      statusEl.className = 'header-status ' + (state.status || 'disconnected');
+
+      // Last sync
+      document.getElementById('lastSync').textContent = 'Last sync: ' + getLastSyncText(state.lastSync);
+
+      // Characters
+      const chars = state.characters || [];
+      document.getElementById('charBadge').textContent = chars.length + ' synced';
+
+      // Avatars
+      const avatarRow = document.getElementById('avatarRow');
+      avatarRow.innerHTML = '';
+      const maxShow = 5;
+      const shown = chars.slice(0, maxShow);
+      shown.forEach((c, i) => {
+        const colors = getAvatarColor(c, i);
+        const div = document.createElement('div');
+        div.className = 'avatar';
+        div.style.background = `linear-gradient(180deg, ${colors[0]}, ${colors[1]})`;
+        div.textContent = (c.name || '?')[0].toUpperCase();
+        avatarRow.appendChild(div);
+      });
+      if (chars.length > maxShow) {
+        const more = document.createElement('div');
+        more.className = 'avatar more';
+        more.textContent = '+' + (chars.length - maxShow);
+        avatarRow.appendChild(more);
+      }
+
+      // Recent activity
+      const recentEl = document.getElementById('recentActivity');
+      const recentRows = document.getElementById('recentRows');
+      if (chars.length > 0) {
+        recentEl.style.display = '';
+        recentRows.innerHTML = '';
+        chars.slice(0, 3).forEach((c, i) => {
+          const dotColors = getAvatarColor(c, i);
+          const row = document.createElement('div');
+          row.className = 'recent-row';
+          row.innerHTML = `
+            <span class="recent-dot" style="background: ${dotColors[0]}"></span>
+            <span class="recent-name">${c.name}</span>
+            <span class="recent-info">${c.class || ''}</span>
+            <span class="recent-spacer"></span>
+          `;
+          recentRows.appendChild(row);
+        });
+      } else {
+        recentEl.style.display = 'none';
+      }
+    }
+
+    function resizeWindow() {
+      const h = document.querySelector('.tray-container').offsetHeight;
+      if (window.electronAPI.resizeTray) window.electronAPI.resizeTray(h);
+    }
+
+    // Load initial state
+    window.electronAPI.getTrayState().then(state => {
+      render(state);
+      setTimeout(resizeWindow, 50);
+    });
+
+    // Listen for updates
+    window.electronAPI.onTrayUpdate(state => {
+      render(state);
+      setTimeout(resizeWindow, 50);
+    });
+  </script>
+</body>
+</html>
