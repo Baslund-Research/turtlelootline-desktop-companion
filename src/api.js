@@ -127,7 +127,9 @@ class TurtleLootLineAPI {
         slotId: parseInt(slotId),
         itemId: item.itemId,
         itemName: item.itemName,
-        itemLink: item.itemLink
+        itemLink: item.itemLink,
+        enchantId: item.enchantId || null,
+        enchantText: item.enchantText || null
       }));
 
       const payload = {
